@@ -1,0 +1,5 @@
+.DS_Store
+
+# Tracking CLAUDE.md only for now — guard against committing settings by accident.
+home/.claude/settings.json
+home/.claude/settings.local.json
