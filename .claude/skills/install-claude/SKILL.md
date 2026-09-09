@@ -6,7 +6,6 @@ description: >-
   instead of copying them verbatim. Pass `capture` to go the other way and fold
   this machine's portable edits back into the repo.
 argument-hint: [capture]
-arguments: direction
 disable-model-invocation: true
 allowed-tools: Read, Bash(diff *), Bash(git diff *), Bash(git status *)
 ---
@@ -15,7 +14,7 @@ The repo copy at `${CLAUDE_PROJECT_DIR}/claude/CLAUDE.md` is the portable
 source of truth. The live file at `~/.claude/CLAUDE.md` is what Claude Code loads
 as user instructions on this machine. They are separate files — no symlink.
 
-`$direction` is empty (install — the default) or `capture` (the reverse).
+`$ARGUMENTS` is empty (install — the default) or `capture` (the reverse).
 
 ## Default — repo → machine
 
