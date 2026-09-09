@@ -2,7 +2,7 @@
 name: install-claude
 description: >-
   Install this repo's tracked user-level CLAUDE.md onto the current machine: merge
-  home/.claude/CLAUDE.md into ~/.claude/CLAUDE.md, adjusting machine-specific paths
+  claude/CLAUDE.md into ~/.claude/CLAUDE.md, adjusting machine-specific paths
   instead of copying them verbatim. Pass `capture` to go the other way and fold
   this machine's portable edits back into the repo.
 argument-hint: [capture]
@@ -11,7 +11,7 @@ disable-model-invocation: true
 allowed-tools: Read, Bash(diff *), Bash(git diff *), Bash(git status *)
 ---
 
-The repo copy at `${CLAUDE_PROJECT_DIR}/home/.claude/CLAUDE.md` is the portable
+The repo copy at `${CLAUDE_PROJECT_DIR}/claude/CLAUDE.md` is the portable
 source of truth. The live file at `~/.claude/CLAUDE.md` is what Claude Code loads
 as user instructions on this machine. They are separate files — no symlink.
 
@@ -20,7 +20,7 @@ as user instructions on this machine. They are separate files — no symlink.
 ## Default — repo → machine
 
 - If `~/.claude/CLAUDE.md` is absent, the repo copy becomes the result.
-- Otherwise show `diff ~/.claude/CLAUDE.md ${CLAUDE_PROJECT_DIR}/home/.claude/CLAUDE.md`
+- Otherwise show `diff ~/.claude/CLAUDE.md ${CLAUDE_PROJECT_DIR}/claude/CLAUDE.md`
   and merge rather than overwrite:
   - portable content in the repo copy but missing locally → add it
   - machine-specific content only in the live file → keep it
@@ -32,7 +32,7 @@ as user instructions on this machine. They are separate files — no symlink.
 
 ## capture — machine → repo
 
-- Show `diff ${CLAUDE_PROJECT_DIR}/home/.claude/CLAUDE.md ~/.claude/CLAUDE.md`.
+- Show `diff ${CLAUDE_PROJECT_DIR}/claude/CLAUDE.md ~/.claude/CLAUDE.md`.
 - For content only in the live file:
   - portable (a preference, convention, workflow rule, tool choice) → add to the repo copy
   - machine-specific → generalise it (see below) or omit it, and list what was omitted
@@ -47,4 +47,6 @@ as user instructions on this machine. They are separate files — no symlink.
 - General instructions, conventions, preferences → portable.
 - Unsure → ask.
 
-The only machine-specific value today is the notes-vault path, `~/Repositories/notes`.
+Nothing in the repo copy is machine-specific today: the notes-repo section adapts
+by checking `~/Repositories/notes` and `~/notes` at runtime. A vault kept anywhere
+else is the one thing that would need a per-machine edit.

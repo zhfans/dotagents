@@ -9,19 +9,19 @@ The layout leaves room for other agents' user-level config beside it.
 ## Layout
 
 ```
-home/.claude/CLAUDE.md                  tracked copy of ~/.claude/CLAUDE.md
+claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
 .claude/skills/install-claude/SKILL.md  skill that reconciles the two copies
 ```
 
-`home/` mirrors `$HOME`: whatever an agent keeps under the home directory is
-tracked at the same path below `home/`, so the repo path matches the deploy
-path. Another agent means another subtree here (`home/.codex/`, `home/.gemini/`,
-…) — no restructuring.
+One directory per agent at the repo root: `claude/` holds what belongs under
+`~/.claude/`. Another agent means another top-level directory (`codex/`,
+`gemini/`, …), each paired with a skill that knows where its files deploy.
 
-`home/.claude/CLAUDE.md` sits a level down, not at the repo root, on purpose: a
-`CLAUDE.md` at the root — or in a root `.claude/` — loads as *project*
+`claude/CLAUDE.md` lives in its own directory, not at the repo root, on purpose:
+a `CLAUDE.md` at the root — or in a root `.claude/` — loads as *project*
 instructions whenever Claude Code runs here, and this is payload, not guidance
-for working on the repo. Nested, it loads only if an agent explicitly reads it.
+for working on the repo. Tucked under `claude/`, it loads only if an agent
+explicitly reads it.
 
 ## No symlink, no install script
 
@@ -39,7 +39,7 @@ prompted):
 | Command | Direction | Effect |
 |---|---|---|
 | `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths. Creates the file if absent. |
-| `/install-claude capture` | machine → repo | Fold this machine's portable edits into `home/.claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. |
+| `/install-claude capture` | machine → repo | Fold this machine's portable edits into `claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. |
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full
 procedure in [`SKILL.md`](.claude/skills/install-claude/SKILL.md). The skill's
@@ -48,14 +48,15 @@ prompt for approval.
 
 ## Known machine-specific content
 
-- **Notes-vault path** — kept as `~/Repositories/notes` so it resolves anywhere
-  that layout holds. A machine with the vault elsewhere needs that line changed;
-  `install` asks when the path is missing.
+- **Notes-repo path** — the notes section checks `~/Repositories/notes` and
+  `~/notes`, so a vault at either resolves without edits. A vault kept anywhere
+  else needs that section changed for the machine; `install` asks when neither
+  path is present.
 
 ## Not tracked yet
 
 - **Other agents** — user-level config for anything besides Claude Code would
-  live under `home/`, each with its own reconcile skill.
+  get its own top-level directory and reconcile skill.
 - **More of Claude Code** — `settings.json`, `commands/`, `agents/`, further
   `skills/`, hooks. Keep secrets and per-machine values in a gitignored
   `settings.local.json` and let Claude Code merge it at runtime.
