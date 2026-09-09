@@ -57,6 +57,3 @@ prompt for approval.
 
 - **Other agents** — user-level config for anything besides Claude Code would
   get its own top-level directory and reconcile skill.
-- **More of Claude Code** — `settings.json`, `commands/`, `agents/`, further
-  `skills/`, hooks. Keep secrets and per-machine values in a gitignored
-  `settings.local.json` and let Claude Code merge it at runtime.
