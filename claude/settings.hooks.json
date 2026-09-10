@@ -1,0 +1,16 @@
+{
+  "_comment": "A UserPromptSubmit hook that reprints a one-line reminder about the user-level CLAUDE.md each turn (CLAUDE.md loads once at session start and its guidance fades over a long session; the hook does not re-output the file). The install-claude skill merges this 'hooks' block into ~/.claude/settings.json and copies claude-md-reminder.sh to ~/.claude/hooks/. The command uses $HOME because a machine-specific absolute path can't be committed here; ~ never expands in hook command strings, and $HOME expands only if the harness runs the command through a shell rather than exec'ing it directly, so the skill rewrites this to an absolute path on machines where $HOME stays literal. UserPromptSubmit is an event where a hook's plain stdout is injected into the model's context; the script just prints one line pointing back at CLAUDE.md. It blocks nothing and the model may ignore it. No script logic at all — CLAUDE.md holds the actual guidance.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/claude-md-reminder.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
