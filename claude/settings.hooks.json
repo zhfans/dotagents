@@ -1,0 +1,16 @@
+{
+  "_comment": "A UserPromptSubmit hook that re-surfaces the user-level CLAUDE.md each turn (it loads once at session start and fades over a long session). The install-claude skill merges this 'hooks' block into ~/.claude/settings.json and copies claude-md-reminder.sh to ~/.claude/hooks/. Tilde does NOT expand in hook command strings; $HOME (an inherited env var) does. If a machine's harness turns out not to expand it, the skill rewrites the command to an absolute path. UserPromptSubmit is an event where a hook's plain stdout is injected into the model's context; the script just prints one line pointing back at CLAUDE.md. It blocks nothing and the model may ignore it. No script logic at all — CLAUDE.md holds the actual guidance.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/claude-md-reminder.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

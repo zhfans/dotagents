@@ -2,15 +2,19 @@
 
 Version-controlled copy of my user-level configuration for AI coding agents.
 
-Today that's one agent — [Claude Code](https://code.claude.com) — and one file:
-the user-level `CLAUDE.md` it loads in every project, from `~/.claude/CLAUDE.md`.
-The layout leaves room for other agents' user-level config beside it.
+Today that's one agent — [Claude Code](https://code.claude.com) — and two
+things it loads from `~/.claude/` in every project: the user-level `CLAUDE.md`,
+and a `UserPromptSubmit` hook that re-surfaces `CLAUDE.md` each turn so it
+doesn't fade over a long session. The layout leaves room for other agents
+beside it.
 
 ## Layout
 
 ```
 claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
-.claude/skills/install-claude/SKILL.md  skill that reconciles the two copies
+claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.md reminder
+claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block
+.claude/skills/install-claude/SKILL.md  skill that reconciles repo ↔ machine
 ```
 
 One directory per agent at the repo root: `claude/` holds what belongs under
@@ -31,6 +35,32 @@ locations, OS-specific notes — so propagation goes through a skill that
 reconciles the tracked and live copies each run instead of overwriting one with
 the other.
 
+## The CLAUDE.md reminder hook
+
+`CLAUDE.md` is loaded once at session start and then relied on to be
+remembered. Its guidance fades over a long session — the trigger here was a
+"take notes proactively" instruction going unfollowed, and adding explicit
+checkpoints to the text didn't fix it, because nothing re-surfaces them. Hooks
+are the part of Claude Code that runs on every turn regardless of what the model
+is holding onto.
+
+`claude/hooks/claude-md-reminder.sh` runs on `UserPromptSubmit` — before the
+agent reads each new message — and prints one line, which Claude Code injects
+into that turn's context: *keep the guidance in the user-level `CLAUDE.md` in
+mind as you work.* `UserPromptSubmit` is one of the few events where a hook's
+plain stdout becomes model context, so the script is nothing but that text — no
+JSON, no `jq`, no logic. It points at the whole file, not any one part; the
+guidance itself stays in `CLAUDE.md`.
+
+Trade-offs of this approach:
+
+- **It's a nudge, not a gate.** The line is context, same category as
+  `CLAUDE.md` — just refreshed every turn instead of once. The agent can read
+  past it.
+- **Every turn.** It fires on trivial turns too. Cheaper than a blocking hook
+  (no extra round-trip), but a line that appears every turn can still become
+  wallpaper.
+
 ## Use it
 
 From a Claude Code session started in this repo (trust the folder when
@@ -38,20 +68,25 @@ prompted):
 
 | Command | Direction | Effect |
 |---|---|---|
-| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths. Creates the file if absent. |
-| `/install-claude capture` | machine → repo | Fold this machine's portable edits into `claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. |
+| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/hooks/*.sh` into `~/.claude/hooks/` and merge the `hooks` block into `~/.claude/settings.json`. |
+| `/install-claude capture` | machine → repo | Fold this machine's portable `CLAUDE.md` edits into `claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. `CLAUDE.md` only — hooks are repo-owned. |
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full
 procedure in [`SKILL.md`](.claude/skills/install-claude/SKILL.md). The skill's
-`allowed-tools` grant is read-only (`diff`, `git status`); the writes themselves
-prompt for approval.
+`allowed-tools` grant is read-only (`diff`, `git status`, `command -v`); the
+writes themselves prompt for approval.
 
 ## Known machine-specific content
 
-- **Notes-repo path** — the notes section checks `~/Repositories/notes` and
-  `~/notes`, so a vault at either resolves without edits. A vault kept anywhere
-  else needs that section changed for the machine; `install` asks when neither
-  path is present.
+- **Notes-repo path** — the `CLAUDE.md` notes section checks
+  `~/Repositories/notes` then `~/notes`, so a vault at either resolves without
+  edits. A vault kept anywhere else needs that section changed for the machine;
+  `install` asks when neither path is present. (The hook doesn't touch the vault,
+  so it needs no path.)
+- **`$HOME` in the hook command** — `settings.hooks.json` points at
+  `$HOME/.claude/hooks/…`, which relies on the harness expanding `$HOME` in hook
+  command strings (`~` is not expanded). If a machine's harness doesn't, the
+  skill writes the literal absolute path instead.
 
 ## Not tracked yet
 
