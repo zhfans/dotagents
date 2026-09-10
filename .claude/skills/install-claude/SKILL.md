@@ -40,23 +40,29 @@ The repo holds two payloads, both portable sources of truth:
 ### Hooks
 
 - Create `~/.claude/hooks/` if absent. Copy every
-  `${CLAUDE_PROJECT_DIR}/claude/hooks/*.sh` into it and `chmod +x` each. The repo
-  is the source of truth for these — overwrite existing copies. If a script that
-  used to be here is gone from the repo (e.g. a renamed hook), remove its stale
-  copy from `~/.claude/hooks/` too.
+  `${CLAUDE_PROJECT_DIR}/claude/hooks/*.sh` into it and `chmod +x` each,
+  overwriting existing copies — the repo is the source of truth for the scripts
+  it ships.
 - Merge the `hooks` block from `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   into `~/.claude/settings.json`:
   - Create `~/.claude/settings.json` as `{}` if absent.
-  - For each event in the fragment (currently just `UserPromptSubmit`), ensure
-    its entry is present in that event's array. If an entry whose `command` ends
-    in the same script filename already exists, replace it in place; otherwise
-    append. Keep re-install idempotent — never stack duplicates. Drop any entry
-    left behind by a renamed/removed hook script from this repo.
+  - For each event the fragment defines (currently just `UserPromptSubmit`),
+    reconcile that event's array against the fragment, matching entries by the
+    `command`'s script basename: replace a matching entry in place, append if
+    absent. Never stack duplicates.
+  - Prune only inside events the fragment defines, and only entries this skill
+    can attribute to itself: an entry whose `command` points at
+    `~/.claude/hooks/<name>.sh` for a `<name>` this repo no longer ships in
+    `claude/hooks/` is a leftover from an earlier install — drop that entry and
+    delete that one script. Touch nothing else: other events, entries pointing
+    outside `~/.claude/hooks/`, and any script with no matching managed entry are
+    left alone. If unsure whether a leftover is this repo's, keep it and say so.
   - Leave every other key in `settings.json` untouched. The fragment's
     `_comment` key is documentation — do not copy it across.
-  - Command paths use `$HOME/.claude/hooks/<script>.sh`. `$HOME` is an inherited
-    env var and expands in hook commands; `~` does not. If this machine's harness
-    is known not to expand `$HOME` there, substitute the literal absolute path.
+  - Command paths use `$HOME/.claude/hooks/<name>.sh` — portable across machines,
+    and expanded only when the hook runner runs `command` through a shell (`~` is
+    never expanded). Where the runner execs directly and `$HOME` stays literal,
+    substitute the absolute path.
   - Show the resulting `~/.claude/settings.json`, then write it.
 
 ### After

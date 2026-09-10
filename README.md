@@ -84,9 +84,10 @@ procedure in [`SKILL.md`](.claude/skills/install-claude/SKILL.md). The skill's
   `install` asks when neither path is present. (The hook doesn't touch the vault,
   so it needs no path.)
 - **`$HOME` in the hook command** — `settings.hooks.json` points at
-  `$HOME/.claude/hooks/…`, which relies on the harness expanding `$HOME` in hook
-  command strings (`~` is not expanded). If a machine's harness doesn't, the
-  skill writes the literal absolute path instead.
+  `$HOME/.claude/hooks/…` because a machine-specific absolute path can't be
+  committed. `$HOME` expands only if the hook runner runs `command` through a
+  shell (`~` never expands); where it execs directly, `install` rewrites the
+  path to an absolute one for that machine.
 
 ## Not tracked yet
 
