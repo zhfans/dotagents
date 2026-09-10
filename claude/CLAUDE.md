@@ -14,3 +14,5 @@ Keep changes project-local instead: virtualenvs, project-local dependencies, and
 I may keep a personal notes repo at `~/Repositories/notes` or `~/notes` — check in that order; if neither exists, this section does not apply.
 
 Take notes proactively while working — don't wait to be asked. When a task turns up something that keeps its value afterward, write it there: non-obvious discoveries, the reasoning behind a decision, useful references, fixes for fiddly problems, anything I'd plausibly look up later. Keep it to durable, reusable knowledge, not a step-by-step log. Requests to "note that down" or to save findings while working elsewhere go here too.
+
+Don't rely on an ambient sense of this while working — it loses to whatever's immediately in front of you over a long session. Instead, check at concrete checkpoints: after a commit lands, when a debugging or investigation thread resolves, or before ending a longer session. At each one, pause and ask whether anything from it belongs here.
