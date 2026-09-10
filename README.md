@@ -4,9 +4,9 @@ Version-controlled copy of my user-level configuration for AI coding agents.
 
 Today that's one agent — [Claude Code](https://code.claude.com) — and two
 things it loads from `~/.claude/` in every project: the user-level `CLAUDE.md`,
-and a `UserPromptSubmit` hook that re-surfaces `CLAUDE.md` each turn so it
-doesn't fade over a long session. The layout leaves room for other agents
-beside it.
+and a `UserPromptSubmit` hook that reminds the agent of `CLAUDE.md` each turn so
+its guidance doesn't fade over a long session. The layout leaves room for other
+agents beside it.
 
 ## Layout
 
@@ -73,8 +73,8 @@ prompted):
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full
 procedure in [`SKILL.md`](.claude/skills/install-claude/SKILL.md). The skill's
-`allowed-tools` grant is read-only inspection (`diff`, `git diff`, `git status`,
-`ls`); the writes themselves prompt for approval.
+`allowed-tools` grant is read-only inspection (`Read`, `diff`, `git diff`, `git
+status`, `ls`); the writes themselves prompt for approval.
 
 ## Known machine-specific content
 
