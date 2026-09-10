@@ -73,8 +73,8 @@ prompted):
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full
 procedure in [`SKILL.md`](.claude/skills/install-claude/SKILL.md). The skill's
-`allowed-tools` grant is read-only (`diff`, `git status`, `command -v`); the
-writes themselves prompt for approval.
+`allowed-tools` grant is read-only inspection (`diff`, `git diff`, `git status`,
+`ls`); the writes themselves prompt for approval.
 
 ## Known machine-specific content
 

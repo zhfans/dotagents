@@ -2,13 +2,13 @@
 name: install-claude
 description: >-
   Install this repo's tracked user-level Claude Code config onto the current
-  machine: merge claude/CLAUDE.md into ~/.claude/CLAUDE.md, and install the
-  claude/hooks/ scripts plus the claude/settings.hooks.json block into ~/.claude/,
-  adjusting machine-specific paths instead of copying them verbatim. Pass
-  `capture` to fold this machine's portable CLAUDE.md edits back into the repo.
+  machine: merge claude/CLAUDE.md into ~/.claude/CLAUDE.md, and install this
+  repo's hook scripts and settings.hooks.json block under ~/.claude/, adjusting
+  machine-specific paths instead of copying them verbatim. Pass `capture` to fold
+  this machine's portable CLAUDE.md edits back into the repo.
 argument-hint: [capture]
 disable-model-invocation: true
-allowed-tools: Read, Bash(diff *), Bash(git diff *), Bash(git status *), Bash(command -v *), Bash(ls *)
+allowed-tools: Read, Bash(diff *), Bash(git diff *), Bash(git status *), Bash(ls *)
 ---
 
 The repo holds two payloads, both portable sources of truth:
