@@ -83,7 +83,7 @@ status`, `ls`); the writes themselves prompt for approval.
   edits. A vault kept anywhere else needs that section changed for the machine;
   `install` asks when neither path is present. (The hook doesn't touch the vault,
   so it needs no path.)
-- **`$HOME` in the hook command** — `settings.hooks.json` points at
+- **`$HOME` in the hook command** — `claude/settings.hooks.json` points at
   `$HOME/.claude/hooks/…` because a machine-specific absolute path can't be
   committed. `$HOME` expands only if the hook runner runs `command` through a
   shell (`~` never expands); where it execs directly, `install` rewrites the

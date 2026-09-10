@@ -11,8 +11,9 @@
 # It blocks nothing and the model may ignore it. The guidance lives in
 # CLAUDE.md; this only points back at it.
 #
-# Deployed to ~/.claude/hooks/ by the install-claude skill; wired as a
-# UserPromptSubmit hook in ~/.claude/settings.json (see settings.hooks.json).
+# Deployed to ~/.claude/hooks/ by the dotagents repo's install-claude skill;
+# wired as a UserPromptSubmit hook in ~/.claude/settings.json (see that repo's
+# claude/settings.hooks.json).
 
 cat <<'EOF'
 Keep the guidance in the user-level CLAUDE.md in mind as you work.
