@@ -14,6 +14,11 @@
 # Claude Code labels this "Stop hook feedback" in the transcript instead of a
 # hook error — nothing is wrong when it fires, it's a routine checkpoint.
 #
+# The prompt tells the agent to stay quiet on a "no" — the round-trip still
+# happens every turn (the hook still can't tell in advance whether there's
+# anything to note), but a clean turn now ends without a "nothing to note"
+# filler line. Only a "yes" produces visible output: the note itself.
+#
 # stop_hook_active is the documented anti-loop guard: true means a Stop hook
 # already forced a continuation this turn, so let it stop now. (Claude Code
 # also hard-caps at 8 consecutive blocks regardless, but this keeps it to
@@ -36,7 +41,7 @@ if [[ "$stop_hook_active" == "true" ]]; then
   exit 0
 fi
 
-message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, write it now; if no, say so in one line and stop."
+message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, write it now. If no, just stop — don't mention this check or say that there was nothing to note."
 
 jq -n --arg msg "$message" '{
   hookSpecificOutput: {
