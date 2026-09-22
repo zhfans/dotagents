@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+#
+# Stop hook — before the turn ends, force one explicit check against the
+# user-level CLAUDE.md's "take notes proactively" instruction.
+#
+# claude-md-reminder.sh (UserPromptSubmit) re-surfaces CLAUDE.md every turn,
+# but a real session confirmed that alone doesn't work: the agent can trace
+# and explain the reminder mechanism itself without that ever triggering a
+# check against the notes repo. Stop fires once per turn, right after
+# whatever might be worth noting actually happened, and can force one more
+# round instead of just hoping the agent interrupts itself.
+#
+# Returns hookSpecificOutput.additionalContext rather than decision:block, so
+# Claude Code labels this "Stop hook feedback" in the transcript instead of a
+# hook error — nothing is wrong when it fires, it's a routine checkpoint.
+#
+# stop_hook_active is the documented anti-loop guard: true means a Stop hook
+# already forced a continuation this turn, so let it stop now. (Claude Code
+# also hard-caps at 8 consecutive blocks regardless, but this keeps it to
+# one.)
+
+input=$(cat)
+stop_hook_active=$(jq -r '.stop_hook_active // false' <<<"$input")
+
+if [[ "$stop_hook_active" == "true" ]]; then
+  exit 0
+fi
+
+message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, write it now; if no, say so in one line and stop."
+
+jq -n --arg msg "$message" '{
+  hookSpecificOutput: {
+    hookEventName: "Stop",
+    additionalContext: $msg
+  }
+}'
