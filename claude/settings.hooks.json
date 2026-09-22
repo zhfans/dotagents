@@ -1,5 +1,5 @@
 {
-  "_comment": "A UserPromptSubmit hook that reprints a one-line reminder about the user-level CLAUDE.md each turn (CLAUDE.md loads once at session start and its guidance fades over a long session; the hook does not re-output the file). The install-claude skill merges this 'hooks' block into ~/.claude/settings.json and copies claude-md-reminder.sh to ~/.claude/hooks/. The command uses $HOME because a machine-specific absolute path can't be committed here; ~ never expands in hook command strings, and $HOME expands only if the harness runs the command through a shell rather than exec'ing it directly, so the skill rewrites this to an absolute path on machines where $HOME stays literal. UserPromptSubmit is an event where a hook's plain stdout is injected into the model's context; the script just prints one line pointing back at CLAUDE.md. It blocks nothing and the model may ignore it. No script logic at all — CLAUDE.md holds the actual guidance.",
+  "_comment": "Two hooks. UserPromptSubmit reprints a one-line reminder about the user-level CLAUDE.md each turn, since CLAUDE.md loads once at session start and its guidance fades over a long session - confirmed in a real session (2026-09-22) to be a nudge the model reads past rather than one that changes behavior on its own; kept anyway since it's free (no extra round-trip) and covers the whole file, not just note-taking. Stop forces one explicit check against the notes repo before each turn ends, added because that nudge alone wasn't enough for the specific 'take notes proactively' instruction - it returns hookSpecificOutput.additionalContext rather than decision:block so Claude Code labels it 'Stop hook feedback' in the transcript rather than a hook error (nothing is wrong when it fires, it's a routine checkpoint), and it checks stop_hook_active to avoid looping (Claude Code also hard-caps at 8 consecutive blocks regardless). The install-claude skill merges this 'hooks' block into ~/.claude/settings.json and copies each claude/hooks/*.sh into ~/.claude/hooks/. Commands use $HOME because a machine-specific absolute path can't be committed here; ~ never expands in hook command strings, and $HOME expands only if the harness runs the command through a shell rather than exec'ing it directly, so the skill rewrites this to an absolute path on machines where $HOME stays literal.",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -7,6 +7,17 @@
           {
             "type": "command",
             "command": "$HOME/.claude/hooks/claude-md-reminder.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/notes-checkpoint.sh",
             "timeout": 5
           }
         ]

@@ -2,17 +2,18 @@
 
 Version-controlled copy of my user-level configuration for AI coding agents.
 
-Today that's one agent — [Claude Code](https://code.claude.com) — and two
-things it loads from `~/.claude/` in every project: the user-level `CLAUDE.md`,
-and a `UserPromptSubmit` hook that reminds the agent of `CLAUDE.md` each turn so
-its guidance doesn't fade over a long session. The layout leaves room for other
-agents beside it.
+Today that's one agent — [Claude Code](https://code.claude.com) — and what it
+loads from `~/.claude/` in every project: the user-level `CLAUDE.md`, plus two
+hooks that keep its guidance from fading over a long session — a per-turn
+reminder, and a per-turn check against the notes repo before the agent stops.
+The layout leaves room for other agents beside it.
 
 ## Layout
 
 ```
 claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
 claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.md reminder
+claude/hooks/notes-checkpoint.sh        Stop hook: per-turn notes-repo check before finishing
 claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block
 .claude/skills/install-claude/SKILL.md  skill that reconciles repo ↔ machine
 ```
@@ -56,10 +57,39 @@ Trade-offs of this approach:
 
 - **It's a nudge, not a gate.** The line is context, same category as
   `CLAUDE.md` — just refreshed every turn instead of once. The agent can read
-  past it.
+  past it — and, confirmed in a real session (2026-09-22), does: it traced and
+  explained this hook's own mechanics in detail without that ever triggering a
+  check against the notes repo. See [the notes-repo checkpoint
+  hook](#the-notes-repo-checkpoint-hook) below for the follow-up.
 - **Every turn.** It fires on trivial turns too. Cheaper than a blocking hook
-  (no extra round-trip), but a line that appears every turn can still become
-  wallpaper.
+  (no extra round-trip), which is why it's kept despite the finding above — it
+  still covers the whole file, not just note-taking.
+
+## The notes-repo checkpoint hook
+
+The reminder above is a nudge; the note-taking instruction specifically needed
+a gate. `claude/hooks/notes-checkpoint.sh` runs on `Stop` — when the agent is
+about to finish responding — and returns
+`hookSpecificOutput.additionalContext` asking whether anything from the turn
+belongs in the notes repo. Unlike `decision: "block"`, `additionalContext`
+reads as non-error feedback: Claude Code labels it "Stop hook feedback" in the
+transcript instead of a hook error, which fits a routine per-turn checkpoint
+better than something styled as a failure.
+
+The hook checks the `stop_hook_active` field on its stdin and exits 0
+immediately when it's `true`, so a turn gets asked once, not looped — Claude
+Code also hard-caps at 8 consecutive blocks regardless, as a second backstop.
+
+Trade-offs:
+
+- **Costs a round-trip every turn**, including ones with nothing to note —
+  exactly what the reminder hook avoided by staying passive. Worth paying
+  only because passive didn't work on its own.
+- **Still just a question, not a verdict.** The hook can't tell whether a turn
+  actually produced anything worth keeping; it can only force the agent to
+  answer. A turn that answers "nothing to note" every time would satisfy the
+  hook without fixing the underlying problem — this closes the "never even
+  checked" failure mode, not a "checked carelessly" one.
 
 ## Use it
 

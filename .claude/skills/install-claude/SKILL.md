@@ -18,8 +18,9 @@ The repo holds two payloads, both portable sources of truth:
 - `${CLAUDE_PROJECT_DIR}/claude/hooks/*.sh` + `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   → `~/.claude/hooks/` and the `hooks` block of `~/.claude/settings.json`. A
   `UserPromptSubmit` hook that reprints a pointer to `CLAUDE.md` into each turn's
-  context, since `CLAUDE.md` is loaded once and fades. Repo-owned: edited here,
-  not on the machine.
+  context, since `CLAUDE.md` is loaded once and fades, plus a `Stop` hook that
+  forces one check against the notes repo before each turn ends. Repo-owned:
+  edited here, not on the machine.
 
 `$ARGUMENTS` is empty (install — the default) or `capture` (the reverse).
 
@@ -46,7 +47,7 @@ The repo holds two payloads, both portable sources of truth:
 - Merge the `hooks` block from `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   into `~/.claude/settings.json`:
   - Create `~/.claude/settings.json` as `{}` if absent.
-  - For each event the fragment defines (currently just `UserPromptSubmit`),
+  - For each event the fragment defines (today `UserPromptSubmit` and `Stop`),
     reconcile that event's array against the fragment, matching entries by the
     `command`'s script basename: replace a matching entry in place, append if
     absent. Never stack duplicates.
