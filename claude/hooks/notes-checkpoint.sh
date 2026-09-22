@@ -18,6 +18,15 @@
 # already forced a continuation this turn, so let it stop now. (Claude Code
 # also hard-caps at 8 consecutive blocks regardless, but this keeps it to
 # one.)
+#
+# Requires jq, which install-claude deploys this to arbitrary machines
+# without guaranteeing. jq isn't preinstalled on macOS, so if it's missing,
+# exit silently rather than erroring on every single Stop event — the
+# checkpoint just doesn't run instead of spamming a hook-error notice.
+
+if ! command -v jq >/dev/null 2>&1; then
+  exit 0
+fi
 
 input=$(cat)
 stop_hook_active=$(jq -r '.stop_hook_active // false' <<<"$input")
