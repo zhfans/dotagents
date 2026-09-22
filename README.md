@@ -87,9 +87,13 @@ Trade-offs:
   only because passive didn't work on its own.
 - **Still just a question, not a verdict.** The hook can't tell whether a turn
   actually produced anything worth keeping; it can only force the agent to
-  answer. A turn that answers "nothing to note" every time would satisfy the
-  hook without fixing the underlying problem — this closes the "never even
-  checked" failure mode, not a "checked carelessly" one.
+  answer. A turn that silently decides "nothing to note" every time would
+  satisfy the hook without fixing the underlying problem — this closes the
+  "never even checked" failure mode, not a "checked carelessly" one.
+- **Silent on "no."** The prompt tells the agent to stop without commentary
+  when nothing qualifies, so a clean turn ends without a "nothing to note"
+  filler line — only a "yes" produces visible output, the note itself. The
+  round-trip above still happens either way; only its visibility changes.
 
 ## Use it
 
