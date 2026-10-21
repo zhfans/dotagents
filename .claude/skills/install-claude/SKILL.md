@@ -18,9 +18,10 @@ The repo holds two payloads, both portable sources of truth:
 - `${CLAUDE_PROJECT_DIR}/claude/hooks/*.sh` + `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   → `~/.claude/hooks/` and the `hooks` block of `~/.claude/settings.json`. A
   `UserPromptSubmit` hook that reprints a pointer to `CLAUDE.md` into each turn's
-  context, since `CLAUDE.md` is loaded once and fades, plus a `Stop` hook that
-  forces one check against the notes repo before each turn ends. Repo-owned:
-  edited here, not on the machine.
+  context, since `CLAUDE.md` is loaded once and fades, a `Stop` hook that
+  forces one check against the notes repo before each turn ends, and a
+  `PreToolUse` agent hook that has an independent reviewer check each
+  `git commit` the agent runs. Repo-owned: edited here, not on the machine.
 
 `$ARGUMENTS` is empty (install — the default) or `capture` (the reverse).
 
@@ -47,17 +48,24 @@ The repo holds two payloads, both portable sources of truth:
 - Merge the `hooks` block from `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   into `~/.claude/settings.json`:
   - Create `~/.claude/settings.json` as `{}` if absent.
-  - For each event the fragment defines (today `UserPromptSubmit` and `Stop`),
-    reconcile that event's array against the fragment, matching entries by the
-    `command`'s script basename: replace a matching entry in place, append if
-    absent. Never stack duplicates.
+  - For each event the fragment defines (today `UserPromptSubmit`, `PreToolUse`
+    and `Stop`), reconcile that event's array against the fragment, matching
+    entries by their handler's identity: a `command` hook by its script's
+    basename, and an `agent` or `prompt` hook, which has no script, by its
+    `statusMessage` (today only `"Reviewing the commit"`). Replace a matching
+    entry in place, append if absent. Never stack duplicates.
   - Prune only inside events the fragment defines, and only entries this skill
     can attribute to itself: an entry whose `command` points at
     `~/.claude/hooks/<name>.sh` for a `<name>` this repo no longer ships in
     `claude/hooks/` is a leftover from an earlier install — drop that entry and
     delete that one script. Touch nothing else: other events, entries pointing
     outside `~/.claude/hooks/`, and any script with no matching managed entry are
-    left alone. If unsure whether a leftover is this repo's, keep it and say so.
+    left alone. An `agent` or `prompt` hook can't be traced back to this repo
+    once its `statusMessage` is gone from the fragment, so never prune one: if
+    one looks like an earlier version of this repo's, point it out and ask. If
+    unsure whether a leftover is this repo's, keep it and say so.
+  - The commit reviewer runs `jq` and `git`. If `jq` isn't on the PATH, say so
+    and give the install command for this machine; don't install it.
   - Leave every other key in `settings.json` untouched. The fragment's
     `_comment` key is documentation — do not copy it across.
   - Command paths use `$HOME/.claude/hooks/<name>.sh` — portable across machines,
@@ -69,7 +77,7 @@ The repo holds two payloads, both portable sources of truth:
 ### After
 
 - Say a new session is needed to load the changes — `/context` shows the
-  CLAUDE.md load; the hook is picked up at session start.
+  CLAUDE.md load; the hooks are picked up at session start.
 
 ## capture — machine → repo
 
