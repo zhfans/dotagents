@@ -3,9 +3,10 @@
 Version-controlled copy of my user-level configuration for AI coding agents.
 
 Today that's one agent — [Claude Code](https://code.claude.com) — and what it
-loads from `~/.claude/` in every project: the user-level `CLAUDE.md`, plus two
+loads from `~/.claude/` in every project: the user-level `CLAUDE.md`, two
 hooks that keep its guidance from fading over a long session — a per-turn
-reminder, and a per-turn check against the notes repo before the agent stops.
+reminder, and a per-turn check against the notes repo before the agent stops —
+and a hook that has an independent reviewer check each commit the agent makes.
 The layout leaves room for other agents beside it.
 
 ## Layout
@@ -14,7 +15,10 @@ The layout leaves room for other agents beside it.
 claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
 claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.md reminder
 claude/hooks/notes-checkpoint.sh        Stop hook: per-turn notes-repo check before finishing
-claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block
+claude/hooks/user-messages.sh           helper the commit reviewer runs: the user's messages from a transcript
+claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block, incl. the
+                                        PreToolUse agent hook that reviews each git commit,
+                                        and the allow rules that reviewer needs
 .claude/skills/install-claude/SKILL.md  skill that reconciles repo ↔ machine
 ```
 
@@ -95,6 +99,76 @@ Trade-offs:
   filler line — only a "yes" produces visible output, the note itself. The
   round-trip above still happens either way; only its visibility changes.
 
+## The commit review hook
+
+The `PreToolUse` entry in `claude/settings.hooks.json` reviews each change
+before the agent commits it. It has no script: the reviewer's instructions are
+the hook's `prompt`.
+
+**When:** on `PreToolUse` for `git commit`. At that point the change is
+finished and its boundary is the staged diff, and anything the review finds
+goes into the same commit instead of a follow-up. Reviewing after every edit
+sees half-done work, and reviewing on every `Stop` fires on turns that changed
+nothing.
+
+**Who:** not the agent that wrote the change. It already believes the change is
+right, and if it misread the request, its own brief to a reviewer would repeat
+the misreading. The hook is an agent hook (`"type": "agent"`, experimental), so
+Claude Code starts the reviewer itself. The author can't skip it or write its
+brief.
+
+**Context:** the reviewer gathers it from sources the author didn't write:
+
+| Needs | Source |
+|---|---|
+| What the user asked for | the user's own messages, printed from the hook input's `transcript_path` by `~/.claude/hooks/user-messages.sh` |
+| What changed | `git diff --cached` |
+| What the author says it does | the commit message, treated as a claim to check |
+
+If it can't get the user's messages or the diff, the reviewer lets the commit
+through. A review without them is a guess, and the first real use showed a
+blind reviewer blocking on wrong guesses. The fragment's `permissions.allow`
+lists the two commands so they aren't refused: in an auto-mode session both
+were, when the reviewer ran its own `jq` on the transcript. The `jq` filter
+lives in a script so that one narrow rule can allow it, rather than `jq` on
+anything.
+
+On `ok: false` the commit is denied and the reason goes back to the agent as
+the tool error. The agent fixes the problem and commits again, which starts a
+fresh review. The prompt blocks only on real problems (bugs, a change that
+doesn't match the request, a wrong commit message, secrets) so that this loop
+ends.
+
+Trade-offs:
+
+- **Slower commits, and a paid review on each one.** The timeout is 300 s.
+- **Commits made by hand skip it.** Covering those needs a git `pre-commit` hook
+  in each repo.
+- **`if` is best-effort.** `Bash(git commit*)` misses forms like
+  `git -c key=value commit`.
+- **The reviewer's own instructions can leak in.** In the live test it flagged
+  the commit's `Co-Authored-By` trailer because its own attribution reminder
+  names a different model. The prompt now says its own instructions are not the
+  spec.
+- **Tested live (2026-10-21):** it fired on `git commit -m … && git log`,
+  blocked a staged `add()` that subtracted, and the agent got the reason as the
+  tool error and didn't try to get around it. A second run, with a request
+  worded differently from the commit message, showed the reviewer quoting the
+  user's own words from the transcript and getting the diff from
+  `git diff --cached`.
+- **Runs on the background model.** Agent hooks use Claude Code's background
+  model unless the hook sets `model`. A stronger model would review better, at
+  more time and cost per commit.
+- **Needs `jq` on the machine**, which `install` checks for.
+- **A blind review passes silently.** A commit that went through doesn't show
+  whether the reviewer read its sources, since only a block shows its reason.
+- **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
+  for every session, not only the reviewer. Both only read.
+- **Recognised by its `statusMessage`.** `install` matches command hooks by
+  script name; this one has no script, so it's matched by
+  `"Reviewing the commit"`. Renaming that leaves the old entry behind in
+  `settings.json`.
+
 ## Use it
 
 From a Claude Code session started in this repo (trust the folder when
@@ -102,7 +176,7 @@ prompted):
 
 | Command | Direction | Effect |
 |---|---|---|
-| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/hooks/*.sh` into `~/.claude/hooks/` and merge the `hooks` block into `~/.claude/settings.json`. |
+| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/hooks/*.sh` into `~/.claude/hooks/` and merge the `hooks` block and the `permissions.allow` rules into `~/.claude/settings.json`. |
 | `/install-claude capture` | machine → repo | Fold this machine's portable `CLAUDE.md` edits into `claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. `CLAUDE.md` only — hooks are repo-owned. |
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full
