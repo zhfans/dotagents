@@ -3,7 +3,7 @@ name: install-claude
 description: >-
   Install this repo's tracked user-level Claude Code config onto the current
   machine: merge claude/CLAUDE.md into ~/.claude/CLAUDE.md, and install this
-  repo's hook scripts and settings.hooks.json block under ~/.claude/, adjusting
+  repo's hook scripts, hooks and allow rules from settings.hooks.json under ~/.claude/, adjusting
   machine-specific paths instead of copying them verbatim. Pass `capture` to fold
   this machine's portable CLAUDE.md edits back into the repo.
 argument-hint: [capture]
@@ -16,12 +16,14 @@ The repo holds two payloads, both portable sources of truth:
 - `${CLAUDE_PROJECT_DIR}/claude/CLAUDE.md` → `~/.claude/CLAUDE.md`, the user
   instructions Claude Code loads on this machine. Separate files, no symlink.
 - `${CLAUDE_PROJECT_DIR}/claude/hooks/*.sh` + `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
-  → `~/.claude/hooks/` and the `hooks` block of `~/.claude/settings.json`. A
+  → `~/.claude/hooks/`, and the `hooks` block and `permissions.allow` list of
+  `~/.claude/settings.json`. A
   `UserPromptSubmit` hook that reprints a pointer to `CLAUDE.md` into each turn's
   context, since `CLAUDE.md` is loaded once and fades, a `Stop` hook that
   forces one check against the notes repo before each turn ends, and a
   `PreToolUse` agent hook that has an independent reviewer check each
-  `git commit` the agent runs. Repo-owned: edited here, not on the machine.
+  `git commit` the agent runs, with allow rules for the two commands that
+  reviewer runs. Repo-owned: edited here, not on the machine.
 
 `$ARGUMENTS` is empty (install — the default) or `capture` (the reverse).
 
@@ -64,20 +66,30 @@ The repo holds two payloads, both portable sources of truth:
     once its `statusMessage` is gone from the fragment, so never prune one: if
     one looks like an earlier version of this repo's, point it out and ask. If
     unsure whether a leftover is this repo's, keep it and say so.
-  - The commit reviewer runs `jq` and `git`. If `jq` isn't on the PATH, say so
-    and give the install command for this machine; don't install it.
-  - Leave every other key in `settings.json` untouched. The fragment's
-    `_comment` key is documentation — do not copy it across.
+  - The commit reviewer runs `jq` (through `user-messages.sh`) and `git`. If
+    `jq` isn't on the PATH, say so and give the install command for this
+    machine; don't install it.
   - Command paths use `$HOME/.claude/hooks/<name>.sh` — portable across machines,
     and expanded only when the hook runner runs `command` through a shell (`~` is
     never expanded). Where the runner execs directly and `$HOME` stays literal,
     substitute the absolute path.
-  - Show the resulting `~/.claude/settings.json`, then write it.
+- Merge the fragment's `permissions.allow` list into the same file: add each
+  rule that isn't already there, as written. Keep the literal `~` in them: Bash
+  rules match the command text as typed, and the reviewer's prompt tells it to
+  type `~`. Never remove a rule, except one naming `~/.claude/hooks/<name>.sh`
+  for a `<name>` this repo no longer ships, which is a leftover like the hook
+  entries above. Leave the rest of `permissions` (`deny`, `ask`,
+  `defaultMode`, …) alone.
+- Leave every other key in `settings.json` untouched. The fragment's `_comment`
+  key is documentation — do not copy it across.
+- Show the resulting `~/.claude/settings.json`, then write it.
 
 ### After
 
-- Say a new session is needed to load the changes — `/context` shows the
-  CLAUDE.md load; the hooks are picked up at session start.
+- Say a new session is the sure way to load the changes — `/context` shows the
+  CLAUDE.md load. Hook changes have also been seen to apply to a session that
+  was already running, so the commit reviewer may start on this session's next
+  `git commit`.
 
 ## capture — machine → repo
 

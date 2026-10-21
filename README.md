@@ -15,8 +15,10 @@ The layout leaves room for other agents beside it.
 claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
 claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.md reminder
 claude/hooks/notes-checkpoint.sh        Stop hook: per-turn notes-repo check before finishing
+claude/hooks/user-messages.sh           helper the commit reviewer runs: the user's messages from a transcript
 claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block, incl. the
-                                        PreToolUse agent hook that reviews each git commit
+                                        PreToolUse agent hook that reviews each git commit,
+                                        and the allow rules that reviewer needs
 .claude/skills/install-claude/SKILL.md  skill that reconciles repo ↔ machine
 ```
 
@@ -119,9 +121,17 @@ brief.
 
 | Needs | Source |
 |---|---|
-| What the user asked for | the user's own messages, pulled from the hook input's `transcript_path` with `jq` |
+| What the user asked for | the user's own messages, printed from the hook input's `transcript_path` by `~/.claude/hooks/user-messages.sh` |
 | What changed | `git diff --cached` |
 | What the author says it does | the commit message, treated as a claim to check |
+
+If it can't get the user's messages or the diff, the reviewer lets the commit
+through. A review without them is a guess, and the first real use showed a
+blind reviewer blocking on wrong guesses. The fragment's `permissions.allow`
+lists the two commands so they aren't refused: in an auto-mode session both
+were, when the reviewer ran its own `jq` on the transcript. The `jq` filter
+lives in a script so that one narrow rule can allow it, rather than `jq` on
+anything.
 
 On `ok: false` the commit is denied and the reason goes back to the agent as
 the tool error. The agent fixes the problem and commits again, which starts a
@@ -150,6 +160,10 @@ Trade-offs:
   model unless the hook sets `model`. A stronger model would review better, at
   more time and cost per commit.
 - **Needs `jq` on the machine**, which `install` checks for.
+- **A blind review passes silently.** A commit that went through doesn't show
+  whether the reviewer read its sources, since only a block shows its reason.
+- **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
+  for every session, not only the reviewer. Both only read.
 - **Recognised by its `statusMessage`.** `install` matches command hooks by
   script name; this one has no script, so it's matched by
   `"Reviewing the commit"`. Renaming that leaves the old entry behind in
@@ -162,7 +176,7 @@ prompted):
 
 | Command | Direction | Effect |
 |---|---|---|
-| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/hooks/*.sh` into `~/.claude/hooks/` and merge the `hooks` block into `~/.claude/settings.json`. |
+| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/hooks/*.sh` into `~/.claude/hooks/` and merge the `hooks` block and the `permissions.allow` rules into `~/.claude/settings.json`. |
 | `/install-claude capture` | machine → repo | Fold this machine's portable `CLAUDE.md` edits into `claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. `CLAUDE.md` only — hooks are repo-owned. |
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full
