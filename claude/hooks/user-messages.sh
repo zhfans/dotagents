@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# Helper for the commit-review agent hook — print the user's own messages from
+# Helper for the commit-reviewer subagent — print the user's own messages from
 # a Claude Code session transcript, oldest first.
 #
 # Not a hook itself: the reviewer runs it as
-#   ~/.claude/hooks/user-messages.sh <transcript_path>
+#   ~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID
 # to learn what the user asked for, without the committing agent's framing.
+# A transcript path works too.
 # It exists as a script so one narrow permission rule can allow it: in an
 # auto-mode session the reviewer's ad-hoc jq on the transcript was refused,
 # so the review went ahead blind and blocked on guesses.
@@ -19,9 +20,20 @@
 
 set -euo pipefail
 
-if [ $# -ne 1 ] || [ ! -r "$1" ]; then
-  echo "usage: user-messages.sh <readable transcript .jsonl>" >&2
+if [ $# -ne 1 ]; then
+  echo "usage: user-messages.sh <transcript .jsonl | session id>" >&2
   exit 2
 fi
 
-jq -r 'select(.type == "user" and (.message.content | type) == "string") | .message.content' "$1"
+transcript=$1
+# A session id (the commit-reviewer subagent passes $CLAUDE_CODE_SESSION_ID)
+# names ~/.claude/projects/<project>/<session id>.jsonl.
+if [ ! -r "$transcript" ]; then
+  transcript=$(ls ~/.claude/projects/*/"$1".jsonl 2>/dev/null | head -n 1 || true)
+fi
+if [ -z "$transcript" ] || [ ! -r "$transcript" ]; then
+  echo "user-messages.sh: no readable transcript for '$1'" >&2
+  exit 2
+fi
+
+jq -r 'select(.type == "user" and (.message.content | type) == "string") | .message.content' "$transcript"
