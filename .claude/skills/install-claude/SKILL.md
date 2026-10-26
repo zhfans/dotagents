@@ -82,7 +82,8 @@ The repo holds three payloads, all portable sources of truth:
     once its `statusMessage` is gone from the fragment, so never prune one: if
     one looks like an earlier version of this repo's, point it out and ask. If
     unsure whether a leftover is this repo's, keep it and say so.
-  - The commit reviewer runs `jq` (through `user-messages.sh`) and `git`. If
+  - The commit reviewer runs `jq` (through `user-messages.sh`) and `git`, and
+    `pr-review-nudge.sh` needs `jq` too (without it the nudge stays silent). If
     `jq` isn't on the PATH, say so and give the install command for this
     machine; don't install it.
   - Command paths use `$HOME/.claude/hooks/<name>.sh` — portable across machines,

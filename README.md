@@ -169,9 +169,21 @@ the findings. It then asks the user which to do: post them on the PR as one
 review with inline comments, or fix them locally, commit (through the commit
 reviewer) and push. Nothing is posted or changed before the answer.
 
-`claude/hooks/pr-review-nudge.sh` runs on `PostToolUse` for
-`Bash(gh pr create*)` and returns fixed `additionalContext` pointing the agent
+`claude/hooks/pr-review-nudge.sh` runs on `PostToolUse` with
+`"if": "Bash(gh *)"` and returns fixed `additionalContext` pointing the agent
 at that section, so the step isn't forgotten late in a long session.
+
+**Why `Bash(gh *)`, not `Bash(gh pr create*)`:** an `if` pattern that names
+arguments, not just the command, runs the hook anyway on any command containing
+`$()`, backticks or `$VAR` ([hooks
+reference](https://code.claude.com/docs/en/hooks), "How `if` patterns match
+Bash commands"), because those expand only at run time. Agents write such
+commands all the time, and right after install the `gh pr create*` version
+fired on most Bash calls. A pattern naming only the command can be checked from
+the text, so `gh *` filters reliably. It also passes `gh pr view`, `gh api` and
+the rest, so the script narrows it: it reads stdin with `jq` and nudges only
+when the command mentions `pr create` and the output has a PR URL
+(`…/pull/<number>`), which `gh pr create` prints on success.
 
 **Why `/code-review`, not a custom reviewer:** it already runs as a forked
 subagent (its own context window; only the result comes back), so the main
@@ -184,8 +196,14 @@ findings itself, so the user can choose after seeing them instead of before.
 Trade-offs:
 
 - **Instruction plus nudge, not enforcement.** The agent can still skip it.
-- **PRs opened by hand, or with forms `if` misses** (e.g. `gh -R … pr create`,
-  or the GitHub API), get no nudge.
+- **PRs opened by hand or through the GitHub API** get no nudge.
+- **The script's check is loose.** A `gh` command that mentions `pr create`
+  anywhere (say, in a commit message chained with `gh pr view`) and prints a PR
+  URL gets the nudge without opening a PR. Rare enough for a reminder.
+- **`if` still isn't exact.** When Claude Code can't tell which commands an
+  input runs, it runs the hook regardless; the script's check covers that too.
+- **Needs `jq` for that check.** Without it the script exits silently, so no
+  nudge at all.
 - **A paid review per PR**, on top of the per-commit reviews.
 - **Inline comments through `gh api`** need each finding on a changed line;
   the rest goes in the review body.
