@@ -20,7 +20,9 @@ The repo holds two payloads, both portable sources of truth:
   `~/.claude/settings.json`. A
   `UserPromptSubmit` hook that reprints a pointer to `CLAUDE.md` into each turn's
   context, since `CLAUDE.md` is loaded once and fades, a `Stop` hook that
-  forces one check against the notes repo before each turn ends, and a
+  forces one check against the notes repo before each turn ends, a
+  `UserPromptSubmit` hook that has the agent search the notes repo for context
+  on a session's first prompt, and a
   `PreToolUse` agent hook that has an independent reviewer check each
   `git commit` the agent runs, with allow rules for the two commands that
   reviewer runs. Repo-owned: edited here, not on the machine.

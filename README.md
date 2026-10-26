@@ -6,7 +6,8 @@ Today that's one agent — [Claude Code](https://code.claude.com) — and what i
 loads from `~/.claude/` in every project: the user-level `CLAUDE.md`, two
 hooks that keep its guidance from fading over a long session — a per-turn
 reminder, and a per-turn check against the notes repo before the agent stops —
-and a hook that has an independent reviewer check each commit the agent makes.
+a hook that has the agent search the notes for context on a session's first
+request, and a hook that has an independent reviewer check each commit the agent makes.
 The layout leaves room for other agents beside it.
 
 ## Layout
@@ -15,6 +16,7 @@ The layout leaves room for other agents beside it.
 claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
 claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.md reminder
 claude/hooks/notes-checkpoint.sh        Stop hook: per-turn notes-repo check before finishing
+claude/hooks/notes-lookup.sh            UserPromptSubmit hook: notes-repo lookup on a session's first prompt
 claude/hooks/user-messages.sh           helper the commit reviewer runs: the user's messages from a transcript
 claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block, incl. the
                                         PreToolUse agent hook that reviews each git commit,
@@ -98,6 +100,40 @@ Trade-offs:
   when nothing qualifies, so a clean turn ends without a "nothing to note"
   filler line — only a "yes" produces visible output, the note itself. The
   round-trip above still happens either way; only its visibility changes.
+
+## The notes-repo lookup hook
+
+The checkpoint above covers writing notes; this covers reading them. The
+user-level `CLAUDE.md` says to consult the notes when a task might already be
+covered there, but that's at the agent's discretion, and the start of a
+session is when the context would help most.
+
+`claude/hooks/notes-lookup.sh` runs on `UserPromptSubmit` and acts on a
+session's first prompt only. It returns `hookSpecificOutput.additionalContext`
+telling the agent to search the notes repo for anything relevant to that
+request before it starts, handing a broad search to a read-only subagent so
+only the conclusions land in context. `SessionStart` can't do this: it fires
+before the user has typed anything, so there's nothing yet to look up.
+
+Trade-offs:
+
+- **First prompt only.** A marker file per `session_id` in the temp dir keeps
+  later turns quiet. A session resumed after the temp dir is cleared gets one
+  more lookup. A request that changes topic mid-session gets none; the
+  `CLAUDE.md` guidance still covers that.
+- **The agent searches, not the script.** A keyword grep on the prompt would
+  match its wording, not its meaning. The cost is a few reads, or a subagent,
+  at the start of each session, including ones the notes don't cover. The
+  prompt tells the agent to skip trivial requests and to say nothing when it
+  finds nothing.
+- **An instruction, not a gate.** Like the reminder hook, the agent can read
+  past it.
+- **Not an `agent` hook.** On `UserPromptSubmit` an agent hook returns only
+  `ok`/`reason`, and `ok: false` blocks the prompt, so it has no clean way to
+  hand found context to the main agent.
+- **Notes path** is resolved the same way as in `CLAUDE.md`
+  (`~/Repositories/notes`, then `~/notes`); with neither, the hook does
+  nothing. Needs `jq`; without it, it does nothing.
 
 ## The commit review hook
 
