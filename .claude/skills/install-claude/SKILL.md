@@ -3,7 +3,7 @@ name: install-claude
 description: >-
   Install this repo's tracked user-level Claude Code config onto the current
   machine: merge claude/CLAUDE.md into ~/.claude/CLAUDE.md, and install this
-  repo's hook scripts, hooks and allow rules from settings.hooks.json under ~/.claude/, adjusting
+  repo's subagents, hook scripts, hooks and allow rules from settings.hooks.json under ~/.claude/, adjusting
   machine-specific paths instead of copying them verbatim. Pass `capture` to fold
   this machine's portable CLAUDE.md edits back into the repo.
 argument-hint: [capture]
@@ -11,19 +11,22 @@ disable-model-invocation: true
 allowed-tools: Read, Bash(diff *), Bash(git diff *), Bash(git status *), Bash(ls *)
 ---
 
-The repo holds two payloads, both portable sources of truth:
+The repo holds three payloads, all portable sources of truth:
 
 - `${CLAUDE_PROJECT_DIR}/claude/CLAUDE.md` → `~/.claude/CLAUDE.md`, the user
   instructions Claude Code loads on this machine. Separate files, no symlink.
+- `${CLAUDE_PROJECT_DIR}/claude/agents/*.md` → `~/.claude/agents/`: the
+  `commit-reviewer` subagent that `CLAUDE.md` says to run before each
+  `git commit`. Repo-owned.
 - `${CLAUDE_PROJECT_DIR}/claude/hooks/*.sh` + `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   → `~/.claude/hooks/`, and the `hooks` block and `permissions.allow` list of
   `~/.claude/settings.json`. A
   `UserPromptSubmit` hook that reprints a pointer to `CLAUDE.md` into each turn's
   context, since `CLAUDE.md` is loaded once and fades, a `Stop` hook that
-  forces one check against the notes repo before each turn ends, and a
-  `PreToolUse` agent hook that has an independent reviewer check each
-  `git commit` the agent runs, with allow rules for the two commands that
-  reviewer runs. Repo-owned: edited here, not on the machine.
+  forces one check against the notes repo before each turn ends, a
+  `PostToolUse` hook on `gh pr create` that reminds the agent to review the new
+  PR, and allow rules for the two commands the commit reviewer runs (`user-messages.sh` is
+  its helper, not a hook). Repo-owned: edited here, not on the machine.
 
 `$ARGUMENTS` is empty (install — the default) or `capture` (the reverse).
 
@@ -41,6 +44,12 @@ The repo holds two payloads, both portable sources of truth:
 - Show the merged result, then write `~/.claude/CLAUDE.md`.
 - If the live file held portable edits missing from the repo copy, mention that `capture` brings them back.
 
+### Subagents
+
+- Create `~/.claude/agents/` if absent. Copy every
+  `${CLAUDE_PROJECT_DIR}/claude/agents/*.md` into it, overwriting existing
+  copies. Leave other files there alone.
+
 ### Hooks
 
 - Create `~/.claude/hooks/` if absent. Copy every
@@ -50,12 +59,19 @@ The repo holds two payloads, both portable sources of truth:
 - Merge the `hooks` block from `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   into `~/.claude/settings.json`:
   - Create `~/.claude/settings.json` as `{}` if absent.
-  - For each event the fragment defines (today `UserPromptSubmit`, `PreToolUse`
-    and `Stop`), reconcile that event's array against the fragment, matching
+  - For each event the fragment defines (today `UserPromptSubmit`, `PostToolUse`
+    and `Stop`),
+    reconcile that event's array against the fragment, matching
     entries by their handler's identity: a `command` hook by its script's
     basename, and an `agent` or `prompt` hook, which has no script, by its
-    `statusMessage` (today only `"Reviewing the commit"`). Replace a matching
-    entry in place, append if absent. Never stack duplicates.
+    `statusMessage` (none today). Replace a matching entry in place, append if
+    absent. Never stack duplicates.
+  - Retired: the `PreToolUse` agent hook with `statusMessage`
+    `"Reviewing the commit"` was this repo's commit reviewer before the
+    `commit-reviewer` subagent replaced it. If `~/.claude/settings.json` still
+    has it, remove that one entry (and the `PreToolUse` matcher group or event
+    if that leaves it empty), so commits aren't reviewed twice. `PreToolUse`
+    isn't a fragment event, so this is the only pruning there.
   - Prune only inside events the fragment defines, and only entries this skill
     can attribute to itself: an entry whose `command` points at
     `~/.claude/hooks/<name>.sh` for a `<name>` this repo no longer ships in
@@ -87,9 +103,8 @@ The repo holds two payloads, both portable sources of truth:
 ### After
 
 - Say a new session is the sure way to load the changes — `/context` shows the
-  CLAUDE.md load. Hook changes have also been seen to apply to a session that
-  was already running, so the commit reviewer may start on this session's next
-  `git commit`.
+  CLAUDE.md load and the `commit-reviewer` subagent. Hook changes have also
+  been seen to apply to a session that was already running.
 
 ## capture — machine → repo
 
