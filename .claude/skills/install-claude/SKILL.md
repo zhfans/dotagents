@@ -24,6 +24,8 @@ The repo holds three payloads, all portable sources of truth:
   `UserPromptSubmit` hook that reprints a pointer to `CLAUDE.md` into each turn's
   context, since `CLAUDE.md` is loaded once and fades, a `Stop` hook that
   forces one check against the notes repo before each turn ends, a
+  `UserPromptSubmit` hook that has the agent search the notes repo for context
+  on a session's first prompt, a
   `PostToolUse` hook on `gh pr create` that reminds the agent to review the new
   PR, and allow rules for the two commands the commit reviewer runs (`user-messages.sh` is
   its helper, not a hook). Repo-owned: edited here, not on the machine.
