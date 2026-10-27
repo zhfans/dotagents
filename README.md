@@ -239,9 +239,9 @@ Trade-offs:
   watches `git commit` and shows ⚠️ for a commit with no passing review in that
   repo since its last commit, a check the hooks can't make. Like the nudge, it
   ignores `git commit` inside quoted text or heredoc bodies, dry runs, and
-  commits with nothing to commit. A
-  committed PASS row clears at the next prompt; BLOCK and ⚠️ rows stay until
-  dismissed or replaced. With no rows it shows a dim "no open reviews" line,
+  commits with nothing to commit. Every
+  row stays until dismissed or replaced by that repo's next review or commit;
+  none clears by itself. With no rows it shows a dim "no open reviews" line,
   so the band shows the mod is loaded. Mods are an early-access Claude Code
   API.
 - **Needs `jq` on the machine**, which `install` checks for.

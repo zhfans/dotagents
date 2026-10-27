@@ -99,6 +99,12 @@ test('a review shows in the band, then the commit', async ($, on) => {
     expect((await ui.find({ type: 'Text', text: /PASS/ }))?.text).toContain('committed 1a2b3c4')
     await ui.unmount()
 
+    // The committed PASS row stays past the next prompt, until dismissed or replaced.
+    await $.prompt.submit({ text: 'thanks' })
+    ui = await $.ui.mount({ ...BAND, surface })
+    expect((await ui.find({ type: 'Text', text: /PASS/ }))?.text).toContain('committed 1a2b3c4')
+    await ui.unmount()
+
     // A second commit with no new review is flagged.
     await $.tool.call({ tool: 'Bash', command: 'git commit -m "Sneak"' })
     ui = await $.ui.mount({ ...BAND, surface })

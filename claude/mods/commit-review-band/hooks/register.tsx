@@ -189,17 +189,13 @@ export const register: Register = on => {
     return ran
   })
 
-  // Committed PASS rows have done their job; drop them when the user writes next.
+  // A background reviewer's report arrives as a prompt from a peer, not
+  // through session.receive. Rows stay until dismissed or replaced.
   on('prompt.submit', async ($, e, next) => {
-    // A background reviewer's report arrives as a prompt from a peer, not
-    // through session.receive.
     const handback = e.origin?.kind === 'peer' ? parseHandback(e.text) : undefined
-    if (handback && (await finish($, handback.agentId, handback.report))) {
-      return next(e)
+    if (handback) {
+      await finish($, handback.agentId, handback.report)
     }
-    await update($, rows, all =>
-      Object.fromEntries(Object.entries(all).filter(([, r]) => !(r.state === 'pass' && r.committed !== undefined))),
-    )
     return next(e)
   })
 
