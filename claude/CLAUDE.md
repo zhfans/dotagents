@@ -30,6 +30,8 @@ Before each `git commit` you run, in any repo, have the `commit-reviewer` subage
 
 Skip it only when I say to for that commit.
 
+Push in a separate command from the commit, never chained onto it, so a missed review can still be fixed locally before anything is online.
+
 ## Review after opening a PR
 
 Right after you open a pull request (`gh pr create`), review it before moving on:
