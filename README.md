@@ -161,7 +161,7 @@ write:
 
 | Needs | Source |
 |---|---|
-| What the user asked for | the user's own messages and `AskUserQuestion` answers, each after the agent's messages it replies to, printed by `~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID` from the session's transcript |
+| What the user asked for | the user's own messages (typed mid-turn too) and `AskUserQuestion` answers, each after the agent's last few messages before it, printed by `~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID` from the session's transcript |
 | What changed | `git diff --cached` |
 | What the author says it does | the planned commit message, treated as a claim to check |
 
