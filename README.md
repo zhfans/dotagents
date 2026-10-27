@@ -205,12 +205,14 @@ Trade-offs:
   with the user's words it checked against, ⛔ BLOCK with its findings, or ⚠️
   for a blind review. It reads the brief when the reviewer starts
   (`agent.spawn`) and its report from the hand-back, which reaches the session as a
-  prompt from a peer (`prompt.submit`), or from `classic.SubagentStop` where
-  that reaches it (another plugin may answer that event first and not pass it
-  on). It draws above whatever other plugins' bands draw, never in place of
-  them. It
-  also watches `git commit` and shows ⚠️ for a commit with no passing review
-  in that repo since its last commit, a check the hooks can't make. A
+  prompt from a peer (`prompt.submit`), from the Agent tool's result for a
+  foreground review, or from `classic.SubagentStop` where that reaches it
+  (another plugin may answer that event first and not pass it on). It draws
+  above whatever other plugins' bands draw, never in place of them. It also
+  watches `git commit` and shows ⚠️ for a commit with no passing review in that
+  repo since its last commit, a check the hooks can't make. Like the nudge, it
+  ignores `git commit` inside quoted text or heredoc bodies, dry runs, and
+  commits with nothing to commit. A
   committed PASS row clears at the next prompt; BLOCK and ⚠️ rows stay until
   dismissed or replaced. Mods are an early-access Claude Code API.
 - **Needs `jq` on the machine**, which `install` checks for.

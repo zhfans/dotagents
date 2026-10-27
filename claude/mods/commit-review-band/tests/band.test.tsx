@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { commitRepo, parseBrief, parseHandback, parseReport } from '../hooks/register'
+import { commitRepo, isCommit, parseBrief, parseHandback, parseReport } from '../hooks/register'
 
 const BAND = {
   plugin: 'commit-review-band',
@@ -39,7 +39,7 @@ test('parses the reviewer report', () => {
 
 test('parses the brief and the commit repo', () => {
   expect(parseBrief('Repo: /home/u/Repositories/dotagents\nPlanned commit message: "Add a nudge\n\nbody"')).toEqual({
-    repo: 'dotagents',
+    repo: '/home/u/Repositories/dotagents',
     subject: 'Add a nudge',
   })
   expect(parseBrief('Repo: /x/notes\nPlanned commit message:\n"Note it"').subject).toBe('Note it')
@@ -47,6 +47,14 @@ test('parses the brief and the commit repo', () => {
   expect(commitRepo('git -C /b/dotagents commit -m x')).toBe('/b/dotagents')
   expect(commitRepo('git commit -m x')).toBeUndefined()
   expect(commitRepo('git -c user.name=x commit -m y')).toBeUndefined()
+  expect(commitRepo('cd /a/notes; git commit -m x')).toBe('/a/notes')
+  expect(commitRepo('cd /a/notes\ngit commit -m x')).toBe('/a/notes')
+  expect(isCommit('git commit -m x', '[main 1a2b3c4] x')).toBe(true)
+  expect(isCommit('git tag -a v1 -m "after git commit"', '')).toBe(false)
+  expect(isCommit('git commit -F - <<EOF\nmention git commit\nEOF', '')).toBe(true)
+  expect(isCommit('echo done <<EOF\ngit commit\nEOF', '')).toBe(false)
+  expect(isCommit('git commit --dry-run', '')).toBe(false)
+  expect(isCommit('git commit -m x || true', 'nothing to commit, working tree clean')).toBe(false)
 })
 
 test('a review shows in the band, then the commit', async ($, on) => {
@@ -127,5 +135,22 @@ test('a background review ends through its hand-back, and the band beneath still
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect((await ui.find({ type: 'Text', text: /BLOCK/ }))?.text).toContain('a.ts:1 wrong.')
   expect((await ui.find({ type: 'Text', text: /other band/ }))?.text).toBe('other band')
+  await ui.unmount()
+})
+
+test('a foreground review ends through the Agent result; "Repo: ." is the session repo', async ($, on) => {
+  on('agent.spawn', () => ({ agentId: 'f1', model: 'm' }))
+  on('session.cwd', () => ({ value: '/r/dotagents' }))
+  on('tool.call', () => ({ result: { agentId: 'f1', content: [{ type: 'text', text: PASS }] } }))
+  on('ui.toast', () => ({ value: undefined }))
+  on('ui.render', ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
+
+  await $.agent.spawn({ subagentType: 'commit-reviewer', prompt: 'Repo: .\nPlanned commit message: "Fix"' })
+  await $.tool.call({ tool: 'Agent', subagent_type: 'commit-reviewer', description: 'review', prompt: 'Repo: .' })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /PASS/ }))?.text).toContain('dotagents')
   await ui.unmount()
 })

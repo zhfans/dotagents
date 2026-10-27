@@ -25,7 +25,7 @@ const isReviewer = (type: string | undefined) => type === REVIEWER || !!type?.en
 export const parseBrief = (prompt: string): { repo: string; subject: string } => {
   const repo = /Repo(?: path)?:\s*(\S+)/i.exec(prompt)?.[1] ?? 'unknown repo'
   const message = /commit message:\s*\n?\s*["“]?([^\n"”]+)/i.exec(prompt)?.[1] ?? ''
-  return { repo: basename(repo), subject: message.trim() }
+  return { repo, subject: message.trim() }
 }
 
 // The reviewer's reply: "Verdict: PASS|BLOCK", "Sources: …", "Findings: …".
@@ -58,18 +58,40 @@ export const parseHandback = (text: string): { agentId: string; report: string }
   return { agentId, report: body.replace(/^ {2}/gm, '').trim() }
 }
 
-// The repo a git commit ran in: a -C path, else a leading cd, else the session's.
-export const commitRepo = (command: string): string | undefined =>
-  COMMIT_RE.exec(command)?.[2] ?? /(?:^|[;&|]\s*)cd\s+(\S+)\s*&&[^;|]*\bgit\b/.exec(command)?.[1]
+// The command without heredoc bodies and quoted strings, so text that only
+// mentions git commit (a message, a tag note) doesn't count as one.
+export const commandWords = (command: string): string =>
+  command
+    .replace(/<<-?\s*(['"]?)(\w+)\1([^\n]*)\n[\s\S]*?\n[ \t]*\2(?=\n|$)/g, '$3')
+    .replace(/'[^']*'/g, '')
+    .replace(/"(?:[^"\\]|\\.)*"/g, '')
+
+// A git commit that made a commit: not a dry run, not one with nothing to commit.
+export const isCommit = (command: string, output: string): boolean =>
+  COMMIT_RE.test(commandWords(command)) &&
+  !/\s--dry-run(\s|$)/.test(command) &&
+  !/nothing to commit|no changes added to commit/.test(output)
+
+// The repo a git commit ran in: a -C path, else a cd before it, else the session's.
+export const commitRepo = (command: string): string | undefined => {
+  const words = commandWords(command)
+  return COMMIT_RE.exec(words)?.[2] ?? /(?:^|[;&|\n]\s*)cd\s+(\S+)\s*(?:&&|;|\n)[\s\S]*\bgit\b/.exec(words)?.[1]
+}
+
+// A repo named by a path; "." and "./" are the session's own directory.
+const repoName = async ($: Dollar, path: string): Promise<string> =>
+  basename(/^\.\/?$/.test(path) ? await $.session.cwd() : path)
 
 // Agent id -> repo and subject from the brief, until the reviewer reports.
 // In session state, so a reload of the mod mid-review doesn't lose it.
 const briefs = atom({ plugin: 'commit-review-band', key: 'briefs' } as const, {})
 
-async function finish($: Dollar, agentId: string, report: string) {
+// Records the report of the review agentId started; false when that agent
+// isn't an open review (another subagent's report).
+async function finish($: Dollar, agentId: string, report: string): Promise<boolean> {
   const brief = (await read($, briefs))[agentId]
   if (!brief) {
-    return
+    return false
   }
   await update($, briefs, all => Object.fromEntries(Object.entries(all).filter(([id]) => id !== agentId)))
   const review: Review = { ...brief, ...parseReport(report), report }
@@ -77,13 +99,15 @@ async function finish($: Dollar, agentId: string, report: string) {
   if (review.state !== 'pass') {
     $.ui.toast(`Commit review ${review.state === 'block' ? 'BLOCK' : 'blind'}: ${review.repo}`)
   }
+  return true
 }
 
 export const register: Register = on => {
   on('agent.spawn', async ($, e, next) => {
     const spawned = await next(e)
     if (isReviewer(e.subagentType) && spawned.agentId) {
-      const brief = parseBrief(e.prompt)
+      const parsed = parseBrief(e.prompt)
+      const brief = { ...parsed, repo: await repoName($, parsed.repo) }
       const agentId = spawned.agentId
       await update($, briefs, all => ({ ...all, [agentId]: brief }))
       await update($, rows, all => ({ ...all, [brief.repo]: { ...brief, state: 'running' as const, findings: [] } }))
@@ -101,12 +125,24 @@ export const register: Register = on => {
   })
 
 
+  // A foreground reviewer's report comes back as the Agent tool's result.
+  on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
+    const ran = await next(e)
+    // The tool's record (BuiltinToolResults.Agent) isn't narrowed by the matcher.
+    const result = ran.result as { agentId?: string; content?: { text?: string }[] } | undefined
+    const text = (result?.content ?? []).map(block => block.text ?? '').join('\n')
+    if (isReviewer(e.subagent_type) && result?.agentId && /Verdict:/.test(text)) {
+      await finish($, result.agentId, text)
+    }
+    return ran
+  })
+
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
-    if (ran.deny !== undefined || ran.isError || !COMMIT_RE.test(e.command)) {
+    if (ran.deny !== undefined || ran.isError || !isCommit(e.command, ran.result?.stdout ?? '')) {
       return ran
     }
-    const repo = basename(commitRepo(e.command) ?? (await $.session.cwd()))
+    const repo = await repoName($, commitRepo(e.command) ?? '.')
     const sha = /\[[^\]\n]*? ([0-9a-f]{7,40})\]/.exec(ran.result?.stdout ?? '')?.[1] ?? ''
     const row = (await read($, rows))[repo]
     const isReviewed = row && (row.state === 'pass' || row.state === 'blind') && row.committed === undefined
@@ -127,8 +163,7 @@ export const register: Register = on => {
     // A background reviewer's report arrives as a prompt from a peer, not
     // through session.receive.
     const handback = e.origin?.kind === 'peer' ? parseHandback(e.text) : undefined
-    if (handback) {
-      await finish($, handback.agentId, handback.report)
+    if (handback && (await finish($, handback.agentId, handback.report))) {
       return next(e)
     }
     await update($, rows, all =>
