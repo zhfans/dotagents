@@ -6,8 +6,9 @@ Today that's one agent — [Claude Code](https://code.claude.com) — and what i
 loads from `~/.claude/` in every project: the user-level `CLAUDE.md`, two
 hooks that keep its guidance from fading over a long session — a per-turn
 reminder, and a per-turn check against the notes repo before the agent stops —
-a subagent that independently reviews each commit the agent makes, and a
-review of each PR the agent opens.
+a hook that has the agent search the notes for context on a session's first
+request, a subagent that independently reviews each commit the agent makes,
+and a review of each PR the agent opens.
 The layout leaves room for other agents beside it.
 
 ## Layout
@@ -16,6 +17,7 @@ The layout leaves room for other agents beside it.
 claude/CLAUDE.md                        tracked copy of ~/.claude/CLAUDE.md
 claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.md reminder
 claude/hooks/notes-checkpoint.sh        Stop hook: per-turn notes-repo check before finishing
+claude/hooks/notes-lookup.sh            UserPromptSubmit hook: notes-repo lookup on a session's first prompt
 claude/hooks/pr-review-nudge.sh         PostToolUse hook: PR-review reminder after gh pr create
 claude/hooks/user-messages.sh           helper the commit reviewer runs: the user's messages from a transcript
 claude/agents/commit-reviewer.md        subagent that reviews each staged change before a commit
@@ -100,6 +102,44 @@ Trade-offs:
   when nothing qualifies, so a clean turn ends without a "nothing to note"
   filler line — only a "yes" produces visible output, the note itself. The
   round-trip above still happens either way; only its visibility changes.
+
+## The notes-repo lookup hook
+
+The checkpoint above covers writing notes; this covers reading them. The
+user-level `CLAUDE.md` says to consult the notes when a task might already be
+covered there, but that's at the agent's discretion, and the start of a
+session is when the context would help most.
+
+`claude/hooks/notes-lookup.sh` runs on `UserPromptSubmit` and acts on a
+session's first prompt only. It returns `hookSpecificOutput.additionalContext`
+telling the agent to search the notes repo for anything relevant to that
+request before it starts, handing a broad search to a read-only subagent so
+only the conclusions land in context. `SessionStart` can't do this: it fires
+before the user has typed anything, so there's nothing yet to look up.
+
+Trade-offs:
+
+- **First prompt only.** A marker file per `session_id` in
+  `${XDG_CACHE_HOME:-~/.cache}/claude-notes-lookup/` keeps later turns quiet.
+  It's per-user rather than a shared `/tmp` path another user could create
+  first. If the marker can't be written the hook stays silent, so a failed
+  write can't repeat the lookup every turn. Markers older than 30 days are
+  deleted, and a session resumed after that gets one
+  more lookup. A request that changes topic mid-session gets none; the
+  `CLAUDE.md` guidance still covers that.
+- **The agent searches, not the script.** A keyword grep on the prompt would
+  match its wording, not its meaning. The cost is a few reads, or a subagent,
+  at the start of each session, including ones the notes don't cover. The
+  prompt tells the agent to skip trivial requests and to say nothing when it
+  finds nothing.
+- **An instruction, not a gate.** Like the reminder hook, the agent can read
+  past it.
+- **Not an `agent` hook.** On `UserPromptSubmit` an agent hook returns only
+  `ok`/`reason`, and `ok: false` blocks the prompt, so it has no clean way to
+  hand found context to the main agent.
+- **Notes path** is resolved the same way as in `CLAUDE.md`
+  (`~/Repositories/notes`, then `~/notes`); with neither, the hook does
+  nothing. Needs `jq`; without it, it does nothing.
 
 ## The commit reviewer
 
@@ -228,8 +268,8 @@ status`, `ls`); the writes themselves prompt for approval.
 - **Notes-repo path** — the `CLAUDE.md` notes section checks
   `~/Repositories/notes` then `~/notes`, so a vault at either resolves without
   edits. A vault kept anywhere else needs that section changed for the machine;
-  `install` asks when neither path is present. (The hook doesn't touch the vault,
-  so it needs no path.)
+  `install` asks when neither path is present. `notes-lookup.sh` checks the
+  same two paths, so a vault elsewhere needs that script changed too.
 - **`$HOME` in the hook command** — `claude/settings.hooks.json` points at
   `$HOME/.claude/hooks/…` because a machine-specific absolute path can't be
   committed. `$HOME` expands only if the hook runner runs `command` through a
