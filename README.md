@@ -232,14 +232,18 @@ Trade-offs:
   hand-back prompt, the Agent tool's result and `classic.SubagentStop` are
   read as well; another plugin may answer `SubagentStop` first, and a
   hand-back that arrives mid-turn reaches no `prompt.submit` hook. A git
-  worktree's row is named after its main repo. It draws
-  above whatever other plugins' bands draw, never in place of them. It also
+  worktree's row is named after its main repo. It draws beside other
+  plugins' bands, never in place of them, in whatever order the engine sets.
+  Its rows sit in a dim frame of their own, with no spacing that depends on
+  its neighbours, so it reads as one block wherever it lands. It also
   watches `git commit` and shows ⚠️ for a commit with no passing review in that
   repo since its last commit, a check the hooks can't make. Like the nudge, it
   ignores `git commit` inside quoted text or heredoc bodies, dry runs, and
-  commits with nothing to commit. A
-  committed PASS row clears at the next prompt; BLOCK and ⚠️ rows stay until
-  dismissed or replaced. Mods are an early-access Claude Code API.
+  commits with nothing to commit. Every
+  row stays until dismissed or replaced by that repo's next review or commit;
+  none clears by itself. With no rows it shows a dim "no open reviews" line,
+  so the band shows the mod is loaded. Mods are an early-access Claude Code
+  API.
 - **Needs `jq` on the machine**, which `install` checks for.
 - **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
   for every session, not only the reviewer. Both only read.

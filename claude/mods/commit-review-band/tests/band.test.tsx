@@ -69,6 +69,11 @@ test('a review shows in the band, then the commit', async ($, on) => {
     return <Box />
   })
 
+  // Before any review, an idle row shows the mod is loaded.
+  const idle = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await idle.find({ type: 'Text', text: /no open reviews/ })).toBeTruthy()
+  await idle.unmount()
+
   for (const surface of ['terminal', 'desktop'] as const) {
     await $.agent.spawn({
       subagentType: 'commit-reviewer',
@@ -90,6 +95,12 @@ test('a review shows in the band, then the commit', async ($, on) => {
     await ui.unmount()
 
     await $.tool.call({ tool: 'Bash', command: 'git commit -m "Add a nudge"' })
+    ui = await $.ui.mount({ ...BAND, surface })
+    expect((await ui.find({ type: 'Text', text: /PASS/ }))?.text).toContain('committed 1a2b3c4')
+    await ui.unmount()
+
+    // The committed PASS row stays past the next prompt, until dismissed or replaced.
+    await $.prompt.submit({ text: 'thanks' })
     ui = await $.ui.mount({ ...BAND, surface })
     expect((await ui.find({ type: 'Text', text: /PASS/ }))?.text).toContain('committed 1a2b3c4')
     await ui.unmount()

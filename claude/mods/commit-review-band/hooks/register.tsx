@@ -189,86 +189,90 @@ export const register: Register = on => {
     return ran
   })
 
-  // Committed PASS rows have done their job; drop them when the user writes next.
+  // A background reviewer's report arrives as a prompt from a peer, not
+  // through session.receive. Rows stay until dismissed or replaced.
   on('prompt.submit', async ($, e, next) => {
-    // A background reviewer's report arrives as a prompt from a peer, not
-    // through session.receive.
     const handback = e.origin?.kind === 'peer' ? parseHandback(e.text) : undefined
-    if (handback && (await finish($, handback.agentId, handback.report))) {
-      return next(e)
+    if (handback) {
+      await finish($, handback.agentId, handback.report)
     }
-    await update($, rows, all =>
-      Object.fromEntries(Object.entries(all).filter(([, r]) => !(r.state === 'pass' && r.committed !== undefined))),
-    )
     return next(e)
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const all = Object.values(await read($, rows))
-    // What the plugins beneath draw (ponytail's band, say) stays below ours.
+    // What the plugins beneath draw stays below ours; other bands may draw
+    // above it. The band is self-contained, so it reads the same anywhere.
     const below = await next(e)
-    if (e.props.hasSurvey || all.length === 0) {
+    if (e.props.hasSurvey) {
       return below
     }
-    const open = await read($, expanded)
+    const open = all.length ? await read($, expanded) : null
     const { Box, Button, Text } = $.ui.resolve(e)
     const dismiss = (repo: string) =>
       update($, rows, current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== repo)))
 
-    return (
-      <Box flexDirection="column">
-        {/* Space between rows, and below them, apart from the band beneath. */}
-        <Box flexDirection="column" rowGap="sm" marginBottom="lg">
-          {all.map(r => {
-            const [icon, color, label] = {
-              running: ['⏳', 'subtle', 'reviewing'],
-              pass: ['✅', 'success', 'PASS'],
-              block: ['⛔', 'error', 'BLOCK'],
-              blind: ['⚠️', 'warning', 'PASS, but blind'],
-              unreviewed: ['⚠️', 'warning', 'committed with no passing review'],
-            }[r.state]
-            const detail =
-              r.state === 'running'
-                ? `"${r.subject}"`
-                : r.state === 'block'
-                  ? `${r.findings.length} finding${r.findings.length === 1 ? '' : 's'}: ${r.findings[0] ?? ''}`
-                  : r.state === 'unreviewed'
-                    ? r.committed || 'see git log'
-                    : [r.spec && `checked against "${r.spec}"`, r.diff, r.committed !== undefined && `committed ${r.committed}`]
-                        .filter(Boolean)
-                        .join(' · ')
-            const isOpen = open === r.repo && !!r.report
-            return (
-              <Box key={r.repo} flexDirection="column">
-                {/* The text takes the width and wraps; the buttons keep to the right
-                    edge at the height of the first line, so every row's line up. */}
-                <Box alignItems="flex-start" justifyContent="space-between" columnGap="sm">
-                  <Box flexGrow={1} flexShrink={1}>
-                    <Text color={color} dimColor={r.committed !== undefined && r.state === 'pass'} wrap="wrap">
-                      {icon} {r.repo} · {label}
-                      {detail ? ` · ${detail}` : ''}
-                    </Text>
-                  </Box>
-                  <Box flexShrink={0} columnGap="sm">
-                    {r.report ? (
-                      <Button
-                        key={`details-${r.repo}`}
-                        label={isOpen ? 'Hide' : 'Details'}
-                        onPress={() => update($, expanded, () => (isOpen ? null : r.repo))}
-                      />
-                    ) : null}
-                    {r.state !== 'running' ? (
-                      <Button key={`dismiss-${r.repo}`} label="Dismiss" onPress={() => dismiss(r.repo)} />
-                    ) : null}
-                  </Box>
+    const band = (
+      // A dim frame of its own, so no margin depends on what is above or below.
+      <Box flexDirection="column" rowGap="sm" borderStyle="round" borderDimColor paddingX={1}>
+        {/* An idle row, so the band shows the mod is loaded with nothing to show. */}
+        {all.length === 0 ? <Text dimColor>· commit review · no open reviews</Text> : null}
+        {all.map(r => {
+          const [icon, color, label] = {
+            running: ['⏳', 'subtle', 'reviewing'],
+            pass: ['✅', 'success', 'PASS'],
+            block: ['⛔', 'error', 'BLOCK'],
+            blind: ['⚠️', 'warning', 'PASS, but blind'],
+            unreviewed: ['⚠️', 'warning', 'committed with no passing review'],
+          }[r.state]
+          const detail =
+            r.state === 'running'
+              ? `"${r.subject}"`
+              : r.state === 'block'
+                ? `${r.findings.length} finding${r.findings.length === 1 ? '' : 's'}: ${r.findings[0] ?? ''}`
+                : r.state === 'unreviewed'
+                  ? r.committed || 'see git log'
+                  : [r.spec && `checked against "${r.spec}"`, r.diff, r.committed !== undefined && `committed ${r.committed}`]
+                      .filter(Boolean)
+                      .join(' · ')
+          const isOpen = open === r.repo && !!r.report
+          return (
+            <Box key={r.repo} flexDirection="column">
+              {/* The text takes the width and wraps; the buttons keep to the right
+                  edge at the height of the first line, so every row's line up. */}
+              <Box alignItems="flex-start" justifyContent="space-between" columnGap="sm">
+                <Box flexGrow={1} flexShrink={1}>
+                  <Text color={color} dimColor={r.committed !== undefined && r.state === 'pass'} wrap="wrap">
+                    {icon} {r.repo} · {label}
+                    {detail ? ` · ${detail}` : ''}
+                  </Text>
                 </Box>
-                {isOpen ? <Text dimColor>{r.report}</Text> : null}
+                <Box flexShrink={0} columnGap="sm">
+                  {r.report ? (
+                    <Button
+                      key={`details-${r.repo}`}
+                      label={isOpen ? 'Hide' : 'Details'}
+                      onPress={() => update($, expanded, () => (isOpen ? null : r.repo))}
+                    />
+                  ) : null}
+                  {r.state !== 'running' ? (
+                    <Button key={`dismiss-${r.repo}`} label="Dismiss" onPress={() => dismiss(r.repo)} />
+                  ) : null}
+                </Box>
               </Box>
-            )
-          })}
-        </Box>
+              {isOpen ? <Text dimColor>{r.report}</Text> : null}
+            </Box>
+          )
+        })}
+      </Box>
+    )
+    return below ? (
+      <Box flexDirection="column">
+        {band}
         {below}
       </Box>
+    ) : (
+      band
     )
   })
 }
