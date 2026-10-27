@@ -71,7 +71,7 @@ test('a review shows in the band, then the commit', async ($, on) => {
 
   // Before any review, an idle row shows the mod is loaded.
   const idle = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await idle.find({ type: 'Text', text: /no reviews yet/ })).toBeTruthy()
+  expect(await idle.find({ type: 'Text', text: /no open reviews/ })).toBeTruthy()
   await idle.unmount()
 
   for (const surface of ['terminal', 'desktop'] as const) {
