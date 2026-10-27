@@ -161,7 +161,7 @@ write:
 
 | Needs | Source |
 |---|---|
-| What the user asked for | the user's own messages, printed by `~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID` from the session's transcript |
+| What the user asked for | the user's own messages (typed mid-turn too) and `AskUserQuestion` answers, each after the agent's last few messages before it, printed by `~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID` from the session's transcript |
 | What changed | `git diff --cached` |
 | What the author says it does | the planned commit message, treated as a claim to check |
 
@@ -197,6 +197,11 @@ Trade-offs:
   hook it flagged the commit's `Co-Authored-By` trailer because its own
   attribution reminder named a different model. The prompt says its own
   instructions are not the spec.
+- **The agent's messages are context, not spec.** The reviewer sees them so a
+  reply like "sure, do that" can be read against what it approved. Only the
+  user's words say what the commit should be. Harness-injected strings
+  (subagent hand-backs, task notifications) are left out by their transcript
+  `origin`, so they don't pass as the user's.
 - **Needs `jq` on the machine**, which `install` checks for.
 - **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
   for every session, not only the reviewer. Both only read.
