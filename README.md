@@ -23,6 +23,8 @@ claude/hooks/user-messages.sh           helper the commit reviewer runs: the use
 claude/agents/commit-reviewer.md        subagent that reviews each staged change before a commit
 claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block, plus the
                                         allow rules the commit reviewer needs
+claude/mods/commit-review-band/         Claude Code mod: commit-review verdicts in a band above the prompt
+.claude-plugin/marketplace.json         makes this repo a plugin marketplace for the mods
 .claude/skills/install-claude/SKILL.md  skill that reconciles repo ↔ machine
 ```
 
@@ -197,6 +199,20 @@ Trade-offs:
   hook it flagged the commit's `Co-Authored-By` trailer because its own
   attribution reminder named a different model. The prompt says its own
   instructions are not the spec.
+- **Verdicts can get lost in a long reply.** The `commit-review-band` mod
+  (`claude/mods/`) shows each review in a band above the prompt, drawn by
+  Claude Code rather than written by the agent: ⏳ while it runs, then ✅ PASS
+  with the user's words it checked against, ⛔ BLOCK with its findings, or ⚠️
+  for a blind review. It reads the brief when the reviewer starts
+  (`agent.spawn`) and its report from the hand-back, which reaches the session as a
+  prompt from a peer (`prompt.submit`), or from `classic.SubagentStop` where
+  that reaches it (another plugin may answer that event first and not pass it
+  on). It draws above whatever other plugins' bands draw, never in place of
+  them. It
+  also watches `git commit` and shows ⚠️ for a commit with no passing review
+  in that repo since its last commit, a check the hooks can't make. A
+  committed PASS row clears at the next prompt; BLOCK and ⚠️ rows stay until
+  dismissed or replaced. Mods are an early-access Claude Code API.
 - **Needs `jq` on the machine**, which `install` checks for.
 - **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
   for every session, not only the reviewer. Both only read.
@@ -255,7 +271,7 @@ prompted):
 
 | Command | Direction | Effect |
 |---|---|---|
-| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/agents/*.md` into `~/.claude/agents/` and `claude/hooks/*.sh` into `~/.claude/hooks/`, remove the retired commit-review agent hook, and merge the `hooks` block and the `permissions.allow` rules into `~/.claude/settings.json`. |
+| `/install-claude` | repo → machine | Merge the repo copy into `~/.claude/CLAUDE.md`, adjusting machine-specific paths (creates it if absent); copy `claude/agents/*.md` into `~/.claude/agents/` and `claude/hooks/*.sh` into `~/.claude/hooks/`, remove the retired commit-review agent hook, merge the `hooks` block and the `permissions.allow` rules into `~/.claude/settings.json`, and install the mods in `claude/mods/` as plugins from this repo's marketplace. |
 | `/install-claude capture` | machine → repo | Fold this machine's portable `CLAUDE.md` edits into `claude/CLAUDE.md`, generalising machine-specific values. Leaves it uncommitted. `CLAUDE.md` only — hooks and subagents are repo-owned. |
 
 Bare `/install-claude` installs; `capture` is the explicit reverse. Full

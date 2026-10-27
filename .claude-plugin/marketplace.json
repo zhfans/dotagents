@@ -1,0 +1,5 @@
+{
+  "name": "dotagents",
+  "owner": { "name": "Hong Fan Zhao" },
+  "plugins": [{ "name": "commit-review-band", "source": "./claude/mods/commit-review-band" }]
+}
