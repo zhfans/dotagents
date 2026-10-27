@@ -74,7 +74,8 @@ jq -rnR '
            and ($e.toolUseResult.answers | type) == "object" then
         .out = agent + ([$e.toolUseResult.answers | to_entries[]
           | "[user answered] \(.key)\n=> \(.value)"
-            + ($e.toolUseResult.annotations[.key].notes? // "" | if . != "" then "\n(notes: \(.))" else "" end)
+            # [.key]? so annotations of an unexpected shape give no notes, not an error.
+            + ($e.toolUseResult.annotations[.key]?.notes? // "" | if . != "" then "\n(notes: \(.))" else "" end)
         ] | join("\n")) + "\n"
         | .agent = [] | .asked = []
       else . end;
