@@ -204,10 +204,14 @@ Trade-offs:
   Claude Code rather than written by the agent: ⏳ while it runs, then ✅ PASS
   with the user's words it checked against, ⛔ BLOCK with its findings, or ⚠️
   for a blind review. It reads the brief when the reviewer starts
-  (`agent.spawn`) and its report from the hand-back, which reaches the session as a
-  prompt from a peer (`prompt.submit`), from the Agent tool's result for a
-  foreground review, or from `classic.SubagentStop` where that reaches it
-  (another plugin may answer that event first and not pass it on). It draws
+  (`agent.spawn`) and its report from the reviewer's own `SubagentHandback`
+  call, which a `tool.call` hook sees inside the reviewer's loop with its
+  `agentId`; that covers foreground and background reviews however the report
+  is delivered. `turn.complete` (for a reviewer ending in plain text), the
+  hand-back prompt, the Agent tool's result and `classic.SubagentStop` are
+  read as well; another plugin may answer `SubagentStop` first, and a
+  hand-back that arrives mid-turn reaches no `prompt.submit` hook. A git
+  worktree's row is named after its main repo. It draws
   above whatever other plugins' bands draw, never in place of them. It also
   watches `git commit` and shows ⚠️ for a commit with no passing review in that
   repo since its last commit, a check the hooks can't make. Like the nudge, it

@@ -154,3 +154,40 @@ test('a foreground review ends through the Agent result; "Repo: ." is the sessio
   expect((await ui.find({ type: 'Text', text: /PASS/ }))?.text).toContain('dotagents')
   await ui.unmount()
 })
+
+test("a review ends with the reviewer's own turn; a worktree is named after its main repo", async ($, on) => {
+  on('agent.spawn', () => ({ agentId: 't1', model: 'm' }))
+  on('fs.read', (_, e) =>
+    e.path === '/tmp/wt16/.git' ? { value: 'gitdir: /r/dotagents/.git/worktrees/wt16\n' } : { deny: 'no such file' },
+  )
+  on('turn.complete', (_, e) => ({ text: e.answer }))
+  on('ui.toast', () => ({ value: undefined }))
+  on('ui.render', ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
+
+  await $.agent.spawn({ subagentType: 'commit-reviewer', prompt: 'Repo: /tmp/wt16\nPlanned commit message: "Fix"' })
+  await $.turn.complete({ answer: PASS, durationMs: 1, isAborted: false, turnId: 'x', agentId: 't1' })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const row = await ui.find({ type: 'Text', text: /PASS/ })
+  expect(row?.text).toContain('dotagents')
+  expect(row?.text).not.toContain('wt16')
+  await ui.unmount()
+})
+
+test("a review ends with the reviewer's SubagentHandback call", async ($, on) => {
+  on('agent.spawn', () => ({ agentId: 'h1', model: 'm' }))
+  on('tool.call', () => ({ result: {} }))
+  on('ui.toast', () => ({ value: undefined }))
+  on('ui.render', ($, e) => {
+    const { Box } = $.ui.resolve(e)
+    return <Box />
+  })
+
+  await $.agent.spawn({ subagentType: 'commit-reviewer', prompt: 'Repo: /r/notes\nPlanned commit message: "Fix"' })
+  await $.tool.call({ tool: 'SubagentHandback', message: BLOCK, agentId: 'h1' } as never)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /BLOCK/ }))?.text).toContain('notes')
+  await ui.unmount()
+})

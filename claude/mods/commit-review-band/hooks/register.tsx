@@ -78,9 +78,20 @@ export const commitRepo = (command: string): string | undefined => {
   return COMMIT_RE.exec(words)?.[2] ?? /(?:^|[;&|\n]\s*)cd\s+(\S+)\s*(?:&&|;|\n)[\s\S]*\bgit\b/.exec(words)?.[1]
 }
 
-// A repo named by a path; "." and "./" are the session's own directory.
-const repoName = async ($: Dollar, path: string): Promise<string> =>
-  basename(/^\.\/?$/.test(path) ? await $.session.cwd() : path)
+// A repo named by a path; "." and "./" are the session's own directory, and a
+// git worktree is named after its main repo (its .git file points there).
+const repoName = async ($: Dollar, path: string): Promise<string> => {
+  const dir = /^\.\/?$/.test(path) ? await $.session.cwd() : path
+  try {
+    const main = /gitdir:\s*(.+?)\/\.git\/worktrees\//.exec(await $.fs.read(`${dir}/.git`))?.[1]
+    if (main) {
+      return basename(main)
+    }
+  } catch {
+    // .git is a directory (a main checkout) or unreadable: the folder names it.
+  }
+  return basename(dir)
+}
 
 // Agent id -> repo and subject from the brief, until the reviewer reports.
 // In session state, so a reload of the mod mid-review doesn't lose it.
@@ -124,6 +135,26 @@ export const register: Register = on => {
     return next(e)
   })
 
+
+  // The reviewer reports by calling SubagentHandback in its own loop, foreground
+  // or background, however the report is then delivered (a hand-back that
+  // arrives mid-turn reaches no prompt.submit hook). Not a public tool name,
+  // hence the regex matcher and the cast.
+  on('tool.call', { tool: /^SubagentHandback$/ }, async ($, e, next) => {
+    const message = (e as { message?: unknown }).message
+    if (e.agentId && typeof message === 'string' && /Verdict:/.test(message)) {
+      await finish($, e.agentId, message)
+    }
+    return next(e)
+  })
+
+  // A reviewer that ends with plain text instead.
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId && /Verdict:/.test(e.answer)) {
+      await finish($, e.agentId, e.answer)
+    }
+    return next(e)
+  })
 
   // A foreground reviewer's report comes back as the Agent tool's result.
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
