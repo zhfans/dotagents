@@ -240,24 +240,27 @@ export const register: Register = on => {
             const isOpen = open === r.repo && !!r.report
             return (
               <Box key={r.repo} flexDirection="column">
-                <Box alignItems="center" columnGap="sm">
-                  {/* Shrinks so a long row wraps beside its buttons instead of being cut. */}
-                  <Box flexShrink={1}>
+                {/* The text takes the width and wraps; the buttons keep to the right
+                    edge at the height of the first line, so every row's line up. */}
+                <Box alignItems="flex-start" justifyContent="space-between" columnGap="sm">
+                  <Box flexGrow={1} flexShrink={1}>
                     <Text color={color} dimColor={r.committed !== undefined && r.state === 'pass'} wrap="wrap">
                       {icon} {r.repo} · {label}
                       {detail ? ` · ${detail}` : ''}
                     </Text>
                   </Box>
-                  {r.report ? (
-                    <Button
-                      key={`details-${r.repo}`}
-                      label={isOpen ? 'Hide' : 'Details'}
-                      onPress={() => update($, expanded, () => (isOpen ? null : r.repo))}
-                    />
-                  ) : null}
-                  {r.state !== 'running' ? (
-                    <Button key={`dismiss-${r.repo}`} label="Dismiss" onPress={() => dismiss(r.repo)} />
-                  ) : null}
+                  <Box flexShrink={0} columnGap="sm">
+                    {r.report ? (
+                      <Button
+                        key={`details-${r.repo}`}
+                        label={isOpen ? 'Hide' : 'Details'}
+                        onPress={() => update($, expanded, () => (isOpen ? null : r.repo))}
+                      />
+                    ) : null}
+                    {r.state !== 'running' ? (
+                      <Button key={`dismiss-${r.repo}`} label="Dismiss" onPress={() => dismiss(r.repo)} />
+                    ) : null}
+                  </Box>
                 </Box>
                 {isOpen ? <Text dimColor>{r.report}</Text> : null}
               </Box>
