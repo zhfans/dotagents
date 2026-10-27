@@ -31,6 +31,10 @@ The repo holds three payloads, all portable sources of truth:
   commit and push in one command and reminds the agent of the commit review
   before it pushes, and allow rules for the two commands the commit reviewer runs (`user-messages.sh` is
   its helper, not a hook). Repo-owned: edited here, not on the machine.
+- `${CLAUDE_PROJECT_DIR}/claude/mods/*` → installed as Claude Code plugins
+  from this repo's marketplace (`.claude-plugin/marketplace.json`). Today one:
+  `commit-review-band`, a band above the prompt with each commit review's
+  verdict and any commit made without one. Repo-owned.
 
 `$ARGUMENTS` is empty (install — the default) or `capture` (the reverse).
 
@@ -105,6 +109,18 @@ The repo holds three payloads, all portable sources of truth:
 - Leave every other key in `settings.json` untouched. The fragment's `_comment`
   key is documentation — do not copy it across.
 - Show the resulting `~/.claude/settings.json`, then write it.
+
+### Mods
+
+- If `claude plugin marketplace list` has no `dotagents` marketplace, run
+  `claude plugin marketplace add ${CLAUDE_PROJECT_DIR}`. Added from a folder,
+  its plugins are read from that folder itself, so a later edit here reaches a
+  session through `/reload-plugins`, with no reinstall.
+- For each plugin in `.claude-plugin/marketplace.json` that
+  `claude plugin list` doesn't show, run
+  `claude plugin install <name>@dotagents --scope user`.
+- The mods are early-access Claude Code API: if a plugin fails to load, say so
+  with the error rather than editing it on the machine.
 
 ### After
 
