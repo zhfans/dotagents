@@ -19,6 +19,7 @@ claude/hooks/claude-md-reminder.sh      UserPromptSubmit hook: per-turn CLAUDE.m
 claude/hooks/notes-checkpoint.sh        Stop hook: per-turn notes-repo check before finishing
 claude/hooks/notes-lookup.sh            UserPromptSubmit hook: notes-repo lookup on a session's first prompt
 claude/hooks/pr-review-nudge.sh         PostToolUse hook: PR-review reminder after gh pr create
+claude/hooks/commit-review-nudge.sh     Pre/PostToolUse hook: no commit+push in one command; review reminder after git commit
 claude/hooks/user-messages.sh           helper the commit reviewer runs: the user's messages from a transcript
 claude/agents/commit-reviewer.md        subagent that reviews each staged change before a commit
 claude/settings.hooks.json              the ~/.claude/settings.json "hooks" block, plus the
@@ -163,7 +164,7 @@ write:
 
 | Needs | Source |
 |---|---|
-| What the user asked for | the user's own messages, printed by `~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID` from the session's transcript |
+| What the user asked for | the user's own messages (typed mid-turn too) and `AskUserQuestion` answers, each after the agent's last few messages before it, printed by `~/.claude/hooks/user-messages.sh $CLAUDE_CODE_SESSION_ID` from the session's transcript |
 | What changed | `git diff --cached` |
 | What the author says it does | the planned commit message, treated as a claim to check |
 
@@ -199,6 +200,26 @@ Trade-offs:
   hook it flagged the commit's `Co-Authored-By` trailer because its own
   attribution reminder named a different model. The prompt says its own
   instructions are not the spec.
+- **The agent's messages are context, not spec.** The reviewer sees them so a
+  reply like "sure, do that" can be read against what it approved. Only the
+  user's words say what the commit should be. Harness-injected strings
+  (subagent hand-backs, task notifications) are left out by their transcript
+  `origin`, so they don't pass as the user's.
+- **Nudged after the commit, before the push.** CLAUDE.md fades over a long
+  session, so `claude/hooks/commit-review-nudge.sh` runs on `PostToolUse` with
+  `"if": "Bash(git *)"` and, after each successful `git commit`, reminds the
+  agent to run the reviewer if it skipped it and to fix findings with
+  `--amend` before pushing. It can't come earlier: a `PreToolUse` hook's
+  `additionalContext` reaches the agent next to the tool result, after the
+  command ran. A late review is still harmless while nothing is pushed, so the
+  same script also runs on `PreToolUse` and denies a command that both commits
+  and pushes; CLAUDE.md says to push separately too. The reminder fires after
+  reviewed commits too, and a chained commit and push costs one refused attempt.
+  The script matches `git commit` and `git push` after removing heredoc bodies
+  and quoted strings, so a commit message that mentions `git push` isn't
+  refused, and it stays quiet after a dry run or a commit with nothing to
+  commit. It suggests `git show HEAD` as the diff, which works for a repo's
+  first commit too.
 - **Verdicts can get lost in a long reply.** The `commit-review-band` mod
   (`claude/mods/`) shows each review in a band above the prompt, drawn by
   Claude Code rather than written by the agent: ⏳ while it runs, then ✅ PASS

@@ -27,7 +27,9 @@ The repo holds three payloads, all portable sources of truth:
   `UserPromptSubmit` hook that has the agent search the notes repo for context
   on a session's first prompt, a
   `PostToolUse` hook on `gh pr create` that reminds the agent to review the new
-  PR, and allow rules for the two commands the commit reviewer runs (`user-messages.sh` is
+  PR, a `PreToolUse` and `PostToolUse` hook on `git commit` that refuses a
+  commit and push in one command and reminds the agent of the commit review
+  before it pushes, and allow rules for the two commands the commit reviewer runs (`user-messages.sh` is
   its helper, not a hook). Repo-owned: edited here, not on the machine.
 - `${CLAUDE_PROJECT_DIR}/claude/mods/*` → installed as Claude Code plugins
   from this repo's marketplace (`.claude-plugin/marketplace.json`). Today one:
@@ -65,8 +67,8 @@ The repo holds three payloads, all portable sources of truth:
 - Merge the `hooks` block from `${CLAUDE_PROJECT_DIR}/claude/settings.hooks.json`
   into `~/.claude/settings.json`:
   - Create `~/.claude/settings.json` as `{}` if absent.
-  - For each event the fragment defines (today `UserPromptSubmit`, `PostToolUse`
-    and `Stop`),
+  - For each event the fragment defines (today `UserPromptSubmit`, `PreToolUse`,
+    `PostToolUse` and `Stop`),
     reconcile that event's array against the fragment, matching
     entries by their handler's identity: a `command` hook by its script's
     basename, and an `agent` or `prompt` hook, which has no script, by its
@@ -76,8 +78,8 @@ The repo holds three payloads, all portable sources of truth:
     `"Reviewing the commit"` was this repo's commit reviewer before the
     `commit-reviewer` subagent replaced it. If `~/.claude/settings.json` still
     has it, remove that one entry (and the `PreToolUse` matcher group or event
-    if that leaves it empty), so commits aren't reviewed twice. `PreToolUse`
-    isn't a fragment event, so this is the only pruning there.
+    if that leaves it empty), so commits aren't reviewed twice. It has no
+    `command`, so the basename pruning below never removes it.
   - Prune only inside events the fragment defines, and only entries this skill
     can attribute to itself: an entry whose `command` points at
     `~/.claude/hooks/<name>.sh` for a `<name>` this repo no longer ships in
@@ -89,7 +91,8 @@ The repo holds three payloads, all portable sources of truth:
     one looks like an earlier version of this repo's, point it out and ask. If
     unsure whether a leftover is this repo's, keep it and say so.
   - The commit reviewer runs `jq` (through `user-messages.sh`) and `git`, and
-    `pr-review-nudge.sh` needs `jq` too (without it the nudge stays silent). If
+    `pr-review-nudge.sh` and `commit-review-nudge.sh` need `jq` too (without it
+    the nudges stay silent). If
     `jq` isn't on the PATH, say so and give the install command for this
     machine; don't install it.
   - Command paths use `$HOME/.claude/hooks/<name>.sh` — portable across machines,
