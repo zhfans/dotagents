@@ -208,6 +208,11 @@ Trade-offs:
   same script also runs on `PreToolUse` and denies a command that both commits
   and pushes; CLAUDE.md says to push separately too. The reminder fires after
   reviewed commits too, and a chained commit and push costs one refused attempt.
+  The script matches `git commit` and `git push` after removing heredoc bodies
+  and quoted strings, so a commit message that mentions `git push` isn't
+  refused, and it stays quiet after a dry run or a commit with nothing to
+  commit. It suggests `git show HEAD` as the diff, which works for a repo's
+  first commit too.
 - **Needs `jq` on the machine**, which `install` checks for.
 - **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
   for every session, not only the reviewer. Both only read.

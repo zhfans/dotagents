@@ -20,7 +20,9 @@
 # command for the reason given in pr-review-nudge.sh: a pattern naming
 # arguments runs the hook anyway on any command containing $(), backticks or
 # $VAR. The script narrows "git *" to git commit / git push (allowing -C/-c
-# options before the subcommand).
+# options before the subcommand), matched after removing heredoc bodies and
+# quoted strings, so text that only mentions them doesn't count. It skips a
+# dry run or a commit git reports had nothing to commit.
 #
 # Requires jq. If it's missing, exit silently, as pr-review-nudge.sh does.
 #
@@ -32,9 +34,25 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-input=$(cat)
-event=$(jq -r '.hook_event_name // empty' <<<"$input" 2>/dev/null)
-command=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null)
+# One jq call reads the event, the command with its heredoc bodies and quoted
+# strings removed (so a commit message that mentions "git push" doesn't count),
+# and whether git said there was nothing to commit.
+filter=$(cat <<'JQ'
+[ .hook_event_name // "",
+  (.tool_input.command // ""
+    | gsub("<<-?\\s*(?<q>['\"]?)(?<w>\\w+)\\k<q>(?<rest>[^\\n]*)\\n.*?\\n[ \\t]*\\k<w>(?=\\n|$)"; "\(.rest)"; "p")
+    | gsub("'[^']*'"; "")
+    | gsub("\"(?:[^\"\\\\]|\\\\.)*\""; ""; "p")),
+  ((.tool_response // "" | tostring) | test("nothing to commit|no changes added to commit") | tostring)
+] | join("\u0000")
+JQ
+)
+{
+  IFS= read -r -d '' event
+  IFS= read -r -d '' command
+  IFS= read -r -d '' is_noop
+} < <(jq -j "$filter" 2>/dev/null)
+
 commit_re='(^|[;&|({[:space:]])git([[:space:]]+-[cC][[:space:]]+[^[:space:]]+)*[[:space:]]+commit([[:space:]]|$)'
 push_re='(^|[;&|({[:space:]])git([[:space:]]+-[cC][[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$)'
 if [[ ! "$command" =~ $commit_re ]]; then
@@ -49,5 +67,10 @@ if [[ "$event" == PreToolUse ]]; then
   exit 0
 fi
 
+# A dry run, or a commit with nothing to commit, made no commit.
+if [[ "$is_noop" == true || "$command" =~ [[:space:]]--dry-run([[:space:]]|$) ]]; then
+  exit 0
+fi
+
 jq -n '{hookSpecificOutput: {hookEventName: "PostToolUse",
-  additionalContext: "A git commit was just made. If the commit-reviewer subagent did not pass this exact change before the commit, follow the user-level CLAUDE.md section \"Review before every commit\" now, with the diff command git diff HEAD~1 HEAD, and fix any finding with git commit --amend. Do not push until it passes."}}'
+  additionalContext: "A git commit was just made. If the commit-reviewer subagent did not pass this exact change before the commit, follow the user-level CLAUDE.md section \"Review before every commit\" now, with the diff command git show HEAD, and fix any finding with git commit --amend. Do not push until it passes."}}'
