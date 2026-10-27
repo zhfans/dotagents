@@ -239,7 +239,9 @@ Trade-offs:
   ignores `git commit` inside quoted text or heredoc bodies, dry runs, and
   commits with nothing to commit. A
   committed PASS row clears at the next prompt; BLOCK and ⚠️ rows stay until
-  dismissed or replaced. Mods are an early-access Claude Code API.
+  dismissed or replaced. With no rows it shows a dim "no reviews yet" line,
+  so the band shows the mod is loaded. Mods are an early-access Claude Code
+  API.
 - **Needs `jq` on the machine**, which `install` checks for.
 - **Allow rules are global.** `Bash(git diff *)` and the helper are allowed
   for every session, not only the reviewer. Both only read.

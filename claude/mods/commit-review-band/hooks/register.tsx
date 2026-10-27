@@ -207,11 +207,22 @@ export const register: Register = on => {
     const all = Object.values(await read($, rows))
     // What the plugins beneath draw (ponytail's band, say) stays below ours.
     const below = await next(e)
-    if (e.props.hasSurvey || all.length === 0) {
+    if (e.props.hasSurvey) {
       return below
     }
     const open = await read($, expanded)
     const { Box, Button, Text } = $.ui.resolve(e)
+    // An idle row, so it shows the mod is loaded before any review runs.
+    if (all.length === 0) {
+      return (
+        <Box flexDirection="column">
+          <Box marginBottom="lg">
+            <Text dimColor>· commit review · no reviews yet</Text>
+          </Box>
+          {below}
+        </Box>
+      )
+    }
     const dismiss = (repo: string) =>
       update($, rows, current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== repo)))
 
