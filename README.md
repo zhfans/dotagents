@@ -233,10 +233,9 @@ Trade-offs:
   read as well; another plugin may answer `SubagentStop` first, and a
   hand-back that arrives mid-turn reaches no `prompt.submit` hook. A git
   worktree's row is named after its main repo. It draws beside other
-  plugins' bands, never in place of them: above the bands of plugins loaded
-  after it, below those loaded before it (ponytail's, say), an order the
-  engine sets and a plugin can't choose. So its rows sit in a dim frame of
-  their own, which reads as one block in either place. It also
+  plugins' bands, never in place of them, in whatever order the engine sets.
+  Its rows sit in a dim frame of their own, with no spacing that depends on
+  its neighbours, so it reads as one block wherever it lands. It also
   watches `git commit` and shows ⚠️ for a commit with no passing review in that
   repo since its last commit, a check the hooks can't make. Like the nudge, it
   ignores `git commit` inside quoted text or heredoc bodies, dry runs, and

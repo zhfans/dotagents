@@ -205,9 +205,8 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const all = Object.values(await read($, rows))
-    // What the plugins beneath draw stays below ours. A plugin loaded earlier
-    // (ponytail's band, say) wraps this hook and may draw above it: the order
-    // is the engine's, so the band is framed to read the same in either place.
+    // What the plugins beneath draw stays below ours; other bands may draw
+    // above it. The band is self-contained, so it reads the same anywhere.
     const below = await next(e)
     if (e.props.hasSurvey) {
       return below
@@ -272,7 +271,7 @@ export const register: Register = on => {
       </Box>
     )
     return below ? (
-      <Box flexDirection="column" rowGap="sm">
+      <Box flexDirection="column">
         {band}
         {below}
       </Box>
