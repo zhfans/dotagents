@@ -19,6 +19,10 @@
 # anything to note), but a clean turn now ends without a "nothing to note"
 # filler line. Only a "yes" produces visible output: the note itself.
 #
+# The prompt also spells out committing and pushing: as the notes repo grew,
+# agents kept writing the note and then stopping with it uncommitted or
+# unpushed.
+#
 # stop_hook_active is the documented anti-loop guard: true means a Stop hook
 # already forced a continuation this turn, so let it stop now. (Claude Code
 # also hard-caps at 8 consecutive blocks regardless, but this keeps it to
@@ -41,7 +45,7 @@ if [[ "$stop_hook_active" == "true" ]]; then
   exit 0
 fi
 
-message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, write it now. If no, just stop — don't mention this check or say that there was nothing to note."
+message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, write it now, then commit and push it per the notes repo's own CLAUDE.md — a note left uncommitted or unpushed doesn't count as done. Also check for note edits earlier in this session that are still uncommitted or unpushed, and finish those too. If no, just stop — don't mention this check or say that there was nothing to note."
 
 jq -n --arg msg "$message" '{
   hookSpecificOutput: {
