@@ -26,7 +26,7 @@ Before each `git commit` you run, in any repo, have the `commit-reviewer` subage
 1. Stage exactly what the commit will contain.
 2. Start `commit-reviewer` in the foreground. Its brief is only: the repo path, the commit message you plan to use, and the diff command if it isn't `git diff --cached` (for `--amend`, `git diff --cached HEAD~1`; for `commit -a`, `git diff HEAD`). Don't describe the change, the request or your reasoning: the reviewer reads the user's messages and the diff itself, so a misreading of yours can't steer it.
 3. On `BLOCK`, fix the findings, restage, and run a fresh review. Don't commit over a block. If you think a finding is wrong, tell me and let me decide.
-4. On `PASS`, commit, and report the pass in one line of your reply (such as `Commit review: PASS`). The commit-review band already shows the full verdict, so don't repeat its lines or recap its notes.
+4. On `PASS`, commit, and report the pass in one line of your reply (such as `Commit review: PASS`). The commit-review band already shows the full verdict, so don't repeat its lines or recap its notes. If its `Sources:` line says it couldn't get the user's messages or the diff, say so in that same line.
 
 Skip it only when I say to for that commit.
 
