@@ -150,7 +150,8 @@ Each change gets an independent review before the agent commits it. The
 "Review before every commit" section of `claude/CLAUDE.md` tells the agent to
 stage the change, run the `commit-reviewer` subagent
 (`claude/agents/commit-reviewer.md`) in the foreground, and commit only on its
-`PASS`, showing the user its `Verdict:` and `Sources:` lines.
+`PASS`, reporting the pass in one line (the commit-review band shows the
+full verdict).
 
 **When:** right before `git commit`. At that point the change is finished and
 its boundary is the staged diff, and anything the review finds goes into the

@@ -15,8 +15,9 @@
 #   additionalContext reaches the agent next to the tool result, so after the
 #   command has run. Since nothing is pushed yet, a late review can still be
 #   fixed locally. It fires after reviewed commits too, and blocks nothing.
-#   It also asks for a terse report on a PASS (just the Verdict: and Sources:
-#   lines): agents were recapping the reviewer's notes after every clean pass.
+#   It also asks for a one-line report on a PASS: agents were recapping the
+#   reviewer's notes after every clean pass, and the commit-review band
+#   already shows the verdict.
 #
 # Wired with "if": "Bash(git *)" on both events. The "if" names only the
 # command for the reason given in pr-review-nudge.sh: a pattern naming
@@ -75,4 +76,4 @@ if [[ "$is_noop" == true || "$command" =~ [[:space:]]--dry-run([[:space:]]|$) ]]
 fi
 
 jq -n '{hookSpecificOutput: {hookEventName: "PostToolUse",
-  additionalContext: "A git commit was just made. If the commit-reviewer subagent did not pass this exact change before the commit, follow the user-level CLAUDE.md section \"Review before every commit\" now, with the diff command git show HEAD, and fix any finding with git commit --amend. Do not push until it passes. If it already passed, report it briefly: show only the Verdict: and Sources: lines of the reviewer, with no summary of its notes, non-blocking points or your own reasoning, and do not mention this reminder."}}'
+  additionalContext: "A git commit was just made. If the commit-reviewer subagent did not pass this exact change before the commit, follow the user-level CLAUDE.md section \"Review before every commit\" now, with the diff command git show HEAD, and fix any finding with git commit --amend. Do not push until it passes. If it already passed, report that in one line, such as \"Commit review: PASS\": the commit-review band already shows the verdict, so do not repeat its lines, recap its notes or mention this reminder."}}'
