@@ -47,7 +47,22 @@ if [[ "$stop_hook_active" == "true" ]]; then
   exit 0
 fi
 
-message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, write it now. Either way, if this session has note edits that are still uncommitted or unpushed (this turn's or earlier ones), commit and push them now. Follow the notes repo's own CLAUDE.md, which says which files must wait for the user's approval and what to do when the push isn't a fast-forward, and the user-level commit review. If there is nothing to write or push, just stop — don't mention this check or say that there was nothing to note."
+# Name the notes repo's CLAUDE.md by path: Claude Code loads it only for
+# sessions started inside the notes repo, and agents writing from elsewhere
+# skipped it when the message only said to "follow" it. Path resolution
+# matches the user-level CLAUDE.md and notes-lookup.sh: the first directory
+# that exists; with neither, that CLAUDE.md section doesn't apply, so stay
+# silent.
+notes=""
+for dir in "$HOME/Repositories/notes" "$HOME/notes"; do
+  if [[ -d "$dir" ]]; then
+    notes="$dir"
+    break
+  fi
+done
+[[ -n "$notes" ]] || exit 0
+
+message="Before stopping: does anything from this turn belong in the notes repo per the user-level CLAUDE.md (a discovery, a decision's rationale, a fix, a reference worth keeping)? If yes, read $notes/CLAUDE.md first unless its content is still in your context (it isn't loaded outside the notes repo), then write the note following it. Either way, if this session has note edits that are still uncommitted or unpushed (this turn's or earlier ones), commit and push them now, following that file (it says which files must wait for the user's approval and what to do when the push isn't a fast-forward) and the user-level commit review. If there is nothing to write or push, just stop — don't mention this check or say that there was nothing to note."
 
 jq -n --arg msg "$message" '{
   hookSpecificOutput: {

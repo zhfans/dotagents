@@ -13,7 +13,7 @@ Keep changes project-local instead: virtualenvs, project-local dependencies, and
 
 I may keep a personal notes repo at `~/Repositories/notes` or `~/notes` — check in that order; if neither exists, this section does not apply.
 
-When you work in it, follow its own `CLAUDE.md`.
+When you work in it, follow its own `CLAUDE.md`. Read that file before your first edit there: Claude Code loads it only for sessions started inside the notes repo, so from any other directory it isn't in your context.
 
 Take notes proactively while working — don't wait to be asked. When a task turns up something that keeps its value afterward, write it there: non-obvious discoveries, the reasoning behind a decision, useful references, fixes for fiddly problems, anything I'd plausibly look up later. Keep it to durable, reusable knowledge, not a step-by-step log. Requests to "note that down" or to save findings while working elsewhere go here too.
 
