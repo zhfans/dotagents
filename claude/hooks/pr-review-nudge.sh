@@ -5,9 +5,10 @@
 #
 # The review itself is an instruction in CLAUDE.md ("Review after opening a
 # PR"): run /code-review on the PR, then ask the user whether to post the
-# findings on the PR or fix them locally. This hook only puts that step in
-# front of the agent at the moment it applies, so it isn't forgotten after a
-# long session. It blocks nothing and the agent can still read past it.
+# findings and then fix them, only post them, or only fix them locally. This
+# hook only puts that step in front of the agent at the moment it applies, so
+# it isn't forgotten after a long session. It blocks nothing and the agent can
+# still read past it.
 #
 # Wired with "if": "Bash(gh *)", and PostToolUse fires only when the command
 # succeeded. The "if" names only the command on purpose: a pattern that also
@@ -42,7 +43,7 @@ cat <<'EOF'
 {
   "hookSpecificOutput": {
     "hookEventName": "PostToolUse",
-    "additionalContext": "A pull request was just opened. Before moving on, follow the user-level CLAUDE.md section \"Review after opening a PR\": run /code-review on it, then ask the user whether to post the findings on the PR or fix them locally."
+    "additionalContext": "A pull request was just opened. Before moving on, follow the user-level CLAUDE.md section \"Review after opening a PR\": run /code-review on it, then ask the user what to do with the findings: post then fix, post only, or fix locally."
   }
 }
 EOF

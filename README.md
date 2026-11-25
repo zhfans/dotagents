@@ -253,9 +253,17 @@ Trade-offs:
 
 After the agent opens a PR, the "Review after opening a PR" section of
 `claude/CLAUDE.md` has it run the built-in `/code-review <PR number>` and list
-the findings. It then asks the user which to do: post them on the PR as one
-review with inline comments, or fix them locally, commit (through the commit
-reviewer) and push. Nothing is posted or changed before the answer.
+the findings. It then asks the user which to do. The first, recommended option
+posts them and then works through the threads: it fixes each one or replies
+with why no fix is needed, commits (through the commit reviewer), pushes, and
+resolves the threads it dealt with. The other two options only post them on the
+PR as one review with inline comments, or only fix them locally, commit and
+push. Nothing is posted or changed before the answer.
+
+Whenever the agent fixes review findings, PR comments or commit-review
+findings, a finding that raises a decision rather than a defect goes to the
+user through `AskUserQuestion`. A PR thread for it stays unresolved until the
+user answers.
 
 `claude/hooks/pr-review-nudge.sh` runs on `PostToolUse` with
 `"if": "Bash(gh *)"` and returns fixed `additionalContext` pointing the agent
