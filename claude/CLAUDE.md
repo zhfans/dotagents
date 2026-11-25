@@ -39,10 +39,10 @@ Right after you open a pull request (`gh pr create`), review it before moving on
 1. Run `/code-review <PR number>` with no `--comment` or `--fix`, and wait for it.
 2. If it finds nothing, say so in one line.
 3. Otherwise list the findings, then ask me with `AskUserQuestion` which of these I want, in this order:
-   - **Post, then fix (Recommended):** post them as below, then deal with each posted comment: fix it, or reply on its thread with why it needs no fix. Commit the fixes (with the commit review above), push to the PR branch, then reply on each fixed thread with the commit that fixed it. Last, resolve every thread you dealt with (GraphQL `resolveReviewThread`). A finding in the review body has no thread: answer it in one PR comment instead.
+   - **Post, then fix (Recommended):** post them as below, then deal with each posted comment: fix it, or reply on its thread with why it needs no fix. A comment that raises a decision goes to me first, as the rule below says. Commit the fixes (with the commit review above), push to the PR branch, then reply on each fixed thread with the commit that fixed it. Last, resolve every thread you dealt with: get the thread IDs from GraphQL `pullRequest.reviewThreads` (the REST review returns only comment IDs), then call `resolveReviewThread`. A finding in the review body has no thread: answer it in one PR comment instead.
    - **Post them on the PR:** one PR review with event `COMMENT`, through `gh api repos/<owner>/<repo>/pulls/<n>/reviews`, with an inline comment at each finding's file and line. Put findings that aren't on a changed line in the review body. Change nothing locally.
    - **Fix them locally:** fix them, commit (with the commit review above), and push to the PR branch.
 
 Don't post or fix anything before I answer. Skip the review only when I say to for that PR.
 
-Whenever you fix review findings, PR review comments or commit-review findings, under any of these options or otherwise: when one raises a decision rather than a defect (a trade-off, a design or product choice, behaviour that may be intended), don't settle it yourself. Ask me with `AskUserQuestion`, and leave its thread unresolved until I answer.
+Whenever you fix review findings, PR review comments or commit-review findings, under any of these options or otherwise: when one raises a decision rather than a defect (a trade-off, a design or product choice, behaviour that may be intended), don't settle it yourself. Ask me with `AskUserQuestion`, and leave its PR thread, if it has one, unresolved until I answer.
